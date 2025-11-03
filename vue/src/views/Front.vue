@@ -74,6 +74,10 @@ const search = () => {
 </script>
 
 <template>
+
+<!--  回到顶部-->
+  <el-backtop :right="50" :bottom="50" />
+
   <div class="front-container">
     <!-- 顶部导航栏 -->
     <header class="header-nav">

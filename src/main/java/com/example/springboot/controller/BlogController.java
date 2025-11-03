@@ -63,5 +63,30 @@ public class BlogController {
         return Result.success(blogService.page(new Page<>(pageNum, pageSize), queryWrapper));
     }
 
+    @GetMapping("/front/page")
+    public Result findFrontPage(@RequestParam Integer pageNum,
+                           @RequestParam Integer pageSize,
+                           @RequestParam Integer typeId,
+                           @RequestParam(defaultValue = "") String keyword) {
+
+        LambdaQueryWrapper<Blog> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByDesc(Blog::getId);
+
+        if (typeId != 0){
+            queryWrapper.eq(Blog::getTypeId, typeId);
+        }
+
+        if (StrUtil.isNotBlank(keyword)) {
+            queryWrapper.like(Blog::getName, keyword);
+        }
+        Page<Blog> page = blogService.page(new Page<>(pageNum, pageSize), queryWrapper);
+        for (Blog blog : page.getRecords()){
+            blog.setCount(0);
+            blog.setIsCollected(true);
+        }
+
+        return Result.success(page);
+    }
+
 }
 
