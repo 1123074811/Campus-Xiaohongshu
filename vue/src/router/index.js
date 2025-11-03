@@ -47,7 +47,7 @@ const routes = [
         name: 'FrontHome',
         component: () => import('../views/front/Home.vue'),
         meta: {
-          title: '前台首页'
+          title: '发现精彩'
         }
       },
       {
@@ -64,6 +64,38 @@ const routes = [
         component: () => import('../views/front/Person.vue'),
         meta: {
           title: '个人信息'
+        }
+      },
+      {
+        path: 'publish',
+        name: 'FrontPublish',
+        component: () => import('../views/front/Publish.vue'),
+        meta: {
+          title: '发布页面'
+        }
+      },
+      {
+        path: 'message',
+        name: 'FrontMessage',
+        component: () => import('../views/front/Message.vue'),
+        meta: {
+          title: '消息通知'
+        }
+      },
+      {
+        path: 'user',
+        name: 'FrontUser',
+        component: () => import('../views/front/User.vue'),
+        meta: {
+          title: '个人详情'
+        }
+      },
+      {
+        path: 'search',
+        name: 'FrontSearch',
+        component: () => import('../views/front/Search.vue'),
+        meta: {
+          title: '搜索页面'
         }
       },
       // 前台子路由

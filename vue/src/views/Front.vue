@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { projectName } from '../../config/config.default'
-import { User, Lock, SwitchButton } from '@element-plus/icons-vue'
+import { User, Lock, SwitchButton, VideoCamera, Bell, House } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 // 路由实例
@@ -29,6 +29,48 @@ const handleUpdateAccount = (updatedAccount) => {
   account.value = updatedAccount
 }
 
+const activeLeftMenu = ref('/front/home')
+
+const menus = ref([
+    {
+      path:'/front/home',
+      name:'发现',
+      icon: 'House',
+    },
+    {
+      path:'/front/publish',
+      name:'发布',
+      icon: 'VideoCamera',
+    },
+    {
+      path:'/front/message',
+      name:'通知',
+      icon: 'Bell',
+    },
+    {
+      path:'/front/user',
+      name:'我',
+      icon: 'avatar',
+    },
+])
+
+const changeActivityMenu = (menu) =>{
+  activeLeftMenu.value = menu.path
+
+  router.push(menu.path)
+}
+
+const keyword = ref('')
+
+const search = () => {
+  router.push({
+    path: '/front/search',
+    query: {
+      keyword: keyword.value
+    }
+  })
+}
+
 </script>
 
 <template>
@@ -51,10 +93,15 @@ const handleUpdateAccount = (updatedAccount) => {
               :ellipsis="false"
           >
             <!--前台路由-->
-            <el-menu-item index="/front/home">前台首页</el-menu-item>
+<!--            <el-menu-item index="/front/home">前台首页</el-menu-item>-->
             <!--前台路由-->
           </el-menu>
         </div>
+      </div>
+
+      <div style="display: flex">
+        <el-input v-model="keyword" size="large" placeholder="请输入小红书" prefix-icon="Search" clearable style="width: 406px"/>
+        <el-button type="danger" size="large" style="margin-left: 5px" @click="search">搜索</el-button>
       </div>
 
       <div class="user-warp">
@@ -102,7 +149,31 @@ const handleUpdateAccount = (updatedAccount) => {
 
     <!-- 主内容区域 -->
     <div class="main-content">
-      <router-view @update-account="handleUpdateAccount"></router-view>
+
+
+      <div style="width: 20%">
+
+      <!---左侧菜单部分-->
+      <div style="margin-left: 150px;margin-top: 20px">
+        <div class="menu-item" v-for="menu in menus" :key="menu.path" @click="changeActivityMenu(menu)" :class="{activeMenu: menu.path===activeMenu}">
+          <div style="font-size: 20px;display: flex; align-items: center">
+            <el-icon v-if="menu.icon==='House'"><House /></el-icon>
+            <el-icon v-if="menu.icon==='VideoCamera'"><VideoCamera /></el-icon>
+            <el-icon v-if="menu.icon==='Bell'"><Bell /></el-icon>
+            <div v-if="menu.icon==='avatar'">
+              <el-avatar :src="account.avatarUrl" :size="20"></el-avatar>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center">
+            {{menu.name}}
+          </div>
+        </div>
+      </div>
+      </div>
+      <div style="flex: 1; padding: 20px; position: relative;">
+        <!---右侧内容部分-->
+        <router-view @update-account="handleUpdateAccount"></router-view>
+      </div>
     </div>
 
     <!-- 页脚 -->
@@ -118,7 +189,33 @@ const handleUpdateAccount = (updatedAccount) => {
 $front-back-color: #fff;
 
 /*定义前台头部 字体 主题色*/
-$front-font-color: #4084d9;
+$front-font-color: #d54941;
+
+.menu-item {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  height: 40px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 20px;
+}
+
+.menu-item:hover {
+  background-color: #f5f5f5;
+  border-radius: 20px;
+}
+
+/* 提高activeMenu的优先级，确保选中状态覆盖悬浮状态 */
+.menu-item.activeMenu,
+.menu-item.activeMenu:hover {
+  background-color: #fff2f0;
+  border-radius: 20px;
+  color: #d54941;
+}
+
+
 
 .front-container {
   min-height: 100vh;
@@ -246,6 +343,8 @@ $front-font-color: #4084d9;
 .main-content {
   flex: 1;
   background-color: #fff;
+  display: flex;
+  gap: 20px;
 }
 
 .front-footer {
