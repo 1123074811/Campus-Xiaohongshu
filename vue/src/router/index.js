@@ -109,6 +109,22 @@ const routes = [
         }
       },
       {
+        path: 'type',
+        name: 'BackType',
+        component: () => import('../views/back/Type.vue'),
+        meta: {
+          title: '分类管理'
+        }
+      },
+      {
+        path: 'blog',
+        name: 'BackBlog',
+        component: () => import('../views/back/Blog.vue'),
+        meta: {
+          title: '分类管理'
+        }
+      },
+      {
         path: 'admin',
         name: 'BackAdmin',
         component: () => import('../views/back/Admin.vue'),

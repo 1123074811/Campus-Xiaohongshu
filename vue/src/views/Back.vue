@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import {User, Lock, SwitchButton, House, UserFilled} from '@element-plus/icons-vue'
+import {User, Lock, SwitchButton, House, UserFilled, Setting, Coffee} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { projectName } from '../../config/config.default'
 
@@ -120,6 +120,16 @@ const handleUpdateAccount = (updatedAccount) => {
           <el-menu-item index="/back/home">
             <el-icon><House /></el-icon>
             <template #title>后台首页</template>
+          </el-menu-item>
+
+          <el-menu-item index="/back/type">
+            <el-icon><Setting /></el-icon>
+            <template #title>分类管理</template>
+          </el-menu-item>
+
+          <el-menu-item index="/back/blog">
+            <el-icon><Coffee /></el-icon>
+            <template #title>博客管理</template>
           </el-menu-item>
 
           <el-sub-menu index="" v-if="account.role==='ROLE_ADMIN'">
