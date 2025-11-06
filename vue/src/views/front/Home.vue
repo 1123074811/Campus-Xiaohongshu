@@ -39,7 +39,7 @@ const pageSize = ref(10)
 
 // 加载数据
 const loadBlog = (loadMore) => {
-  const currentPageNum = loadMore ? ++pageNum.value : 1
+  const currentPageNum = loadMore ? pageNum.value + 1 : 1
   request.get("/blog/front/page", {
     params: {
       pageNum: currentPageNum,
@@ -50,8 +50,11 @@ const loadBlog = (loadMore) => {
   }).then(res => {
     if (loadMore) {
       tableData.value = tableData.value.concat(res.data.records)
+      pageNum.value = currentPageNum
     } else {
+      pageNum.value = 1
       tableData.value = res.data.records
+      waterfallRef.value.init()
     }
     pageNum.value = currentPageNum
     total.value = res.data.total
