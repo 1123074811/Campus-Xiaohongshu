@@ -4,12 +4,18 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.springboot.common.Result;
+import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Blog;
+import com.example.springboot.entity.Collect;
 import com.example.springboot.service.IBlogService;
+import com.example.springboot.service.ICollectService;
+import com.example.springboot.utils.TokenUtils;
 import jakarta.annotation.Resource;
+import org.apache.el.parser.Token;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * <p>
@@ -22,6 +28,8 @@ public class BlogController {
 
     @Resource
     private IBlogService blogService;
+    @Resource
+    private ICollectService collectService;
 
     @PostMapping
     public Result save(@RequestBody Blog blog) {
@@ -79,10 +87,29 @@ public class BlogController {
         if (StrUtil.isNotBlank(keyword)) {
             queryWrapper.like(Blog::getName, keyword);
         }
+
+        //拿到所有收藏信息
+        List<Collect> collects = collectService.list();
+
+        Account account = TokenUtils.getCurrentUser();
+
         Page<Blog> page = blogService.page(new Page<>(pageNum, pageSize), queryWrapper);
         for (Blog blog : page.getRecords()){
-            blog.setCount(0);
-            blog.setIsCollected(true);
+            //对于每个博客来说，都应该统计收藏记录
+            //1.这个博客被收藏的次数
+            //2.这博客是否被当前用户收藏
+            int count = 0;
+            for (Collect collect : collects) {
+                //首先判断这个收藏信息是否和当前博客匹配，如果是，说明被收藏一次，则count加1
+                if (Objects.equals(collect.getItemId(), blog.getId())){  //Integer类型的比较：Objects.equals()
+                    count++;
+                    //如果执行到这里，判断这个博客是否被当前用户收藏了
+                    if (Objects.equals(collect.getUserId(), account.getId())){
+                        blog.setIsCollected(true);
+                    }
+                }
+            }
+            blog.setCount(count);
         }
 
         return Result.success(page);

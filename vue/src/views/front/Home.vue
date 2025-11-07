@@ -246,6 +246,25 @@ const cancelReply = () => {
   replyVisible.value = false;
 };
 
+const collect = (id) => {
+  const data = {
+    itemId: id,
+  }
+  request.post("/collect", data).then(res => {
+    if (res.code === '200') {
+      ElMessage.success("收藏成功");
+      blog.value.isCollected = true;
+      blog.value.count++;
+      loadBlog()
+    } else {
+      ElMessage.error(res.msg || '收藏失败');
+      blog.value.isCollected = false;
+      blog.value.count--;
+      loadBlog()
+    }
+  });
+};
+
 </script>
 
 <template>
