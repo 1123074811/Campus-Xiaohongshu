@@ -2,6 +2,10 @@
 import {ref, onMounted, reactive, computed, nextTick} from "vue";
 import request from "@/utils/request.js";
 import { Star, StarFilled } from '@element-plus/icons-vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+import {ElMessage} from "element-plus";
 
 const types = ref([])
 const loadType = () => {
@@ -108,6 +112,8 @@ const isClosing = ref(false)
 const showBlog = (item, event) => {
 
   blog.value = item
+  commentItemId.value = item.id
+  loadComment()
 
   const clickedElement = event.currentTarget
   const rect = clickedElement.getBoundingClientRect()
@@ -186,6 +192,60 @@ const closeBlog = () => {
   }, 500)
 }
 
+const account = ref(localStorage.getItem('account') ? JSON.parse(localStorage.getItem('account')) : {})
+
+const commentItemId = ref(0);
+const replyVisible = ref(false);
+const comments = ref([]);
+const commentForm = ref({});
+
+const loadComment = () => {
+  request.get("/comment/tree/" + commentItemId.value).then(res => {
+    comments.value = res.data;
+  });
+};
+
+const saveComment = () => {
+  if (!account.value.id) {
+    ElMessage.warning("请登录后操作");
+    return;
+  }
+  commentForm.value.itemId = commentItemId.value;
+  if (commentForm.value.contentReply) {
+    commentForm.value.content = commentForm.value.contentReply;
+  }
+  request.post("/comment", commentForm.value).then(res => {
+    if (res.code === '200') {
+      ElMessage.success('评论成功')
+      commentForm.value = {};
+      loadComment();
+    } else {
+      ElMessage.error('评论失败')
+    }
+  })
+};
+
+const delComment = (id) => {
+  request.delete("/comment/" + id).then(res => {
+    if (res.code === '200') {
+      ElMessage.success("删除成功");
+      loadComment();
+    } else {
+      ElMessage.error("删除失败");
+    }
+  });
+};
+
+const handleReply = (pid) => {
+  commentForm.value = { pid: pid };
+  replyVisible.value = true;
+};
+
+const cancelReply = () => {
+  commentForm.value = { pid: '' };
+  replyVisible.value = false;
+};
+
 </script>
 
 <template>
@@ -263,7 +323,115 @@ const closeBlog = () => {
 
           <el-divider></el-divider>
 
+          <!-- 评论区域 -->
+          <div class="comment-section">
+            <div class="comment-header">
+              <span class="comment-count">共 {{ comments.length }} 条评论</span>
+            </div>
 
+            <div class="comment-list">
+              <div v-for="item in comments" :key="item.id" class="comment-thread">
+                <div class="comment-item">
+                  <div class="comment-avatar">
+                    <el-image :src="item.avatarUrl"></el-image>
+                  </div>
+                  <div class="comment-content">
+                    <div class="comment-user">{{ item.nickname }}</div>
+                    <div class="comment-text">{{ item.content }}</div>
+                    <div class="comment-meta">
+                      <span class="comment-time">{{ item.time }}</span>
+                      <el-button link @click="handleReply(item.id)" class="comment-reply-btn">回复</el-button>
+                      <el-button
+                          link
+                          @click="delComment(item.id)"
+                          v-if="account.id === item.userId || account.role === 'ROLE_ADMIN'"
+                          class="comment-delete-btn"
+                      >
+                        删除
+                      </el-button>
+                    </div>
+                    <div class="comment-reply" v-if="commentForm.pid === item.id && replyVisible">
+                      <el-input v-model="commentForm.contentReply" placeholder="写下你的回复..." size="small"></el-input>
+                      <div class="reply-actions">
+                        <el-button size="small" type="primary" @click="saveComment">发布</el-button>
+                        <el-button size="small" @click="cancelReply">取消</el-button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 子评论 -->
+                <template v-if="item.children?.length">
+                  <div v-for="subItem in item.children" class="comment-item comment-sub-item" :key="subItem.id">
+                    <div class="comment-avatar">
+                      <el-image :src="subItem.avatarUrl" />
+                    </div>
+                    <div class="comment-content">
+                      <div class="comment-user">
+                        {{ subItem.nickname }}
+                        <span v-if="subItem.pid" class="reply-target">回复 @{{ subItem.pnickname }}</span>
+                      </div>
+                      <div class="comment-text">{{ subItem.content }}</div>
+                      <div class="comment-meta">
+                        <span class="comment-time">{{ subItem.time }}</span>
+                        <el-button link @click="handleReply(subItem.id)" class="comment-reply-btn">回复</el-button>
+                        <el-button
+                            link
+                            @click="delComment(subItem.id)"
+                            v-if="account.id === subItem.userId || account.role === 'ROLE_ADMIN'"
+                            class="comment-delete-btn"
+                        >
+                          删除
+                        </el-button>
+                      </div>
+                      <div class="comment-reply" v-if="commentForm.pid === subItem.id && replyVisible">
+                        <el-input v-model="commentForm.contentReply" placeholder="写下你的回复..." size="small"></el-input>
+                        <div class="reply-actions">
+                          <el-button size="small" type="primary" @click="saveComment">发布</el-button>
+                          <el-button size="small" @click="cancelReply">取消</el-button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- 底部留白，为固定评论框留出空间 -->
+            <div class="comments-bottom-spacer"></div>
+          </div>
+
+
+        </div>
+
+        <!-- 固定在底部的互动区域，这部分要放在blog-container的div里面 -->
+        <div class="interaction-footer">
+          <div class="interaction-stats">
+            <span class="stat-item" @click="collect(blog.id)">
+              <el-icon v-if="blog.isCollected"><StarFilled /></el-icon>
+              <el-icon v-else><Star /></el-icon>
+              <span>{{ blog.count || 0 }}</span>
+            </span>
+          </div>
+
+          <!-- 评论输入框 -->
+          <div class="comment-input-wrapper">
+            <el-input
+                class="comment-input"
+                v-model="commentForm.content"
+                placeholder="说点什么..."
+                size="small"
+            />
+            <el-button
+                :disabled="!commentForm.content"
+                class="comment-send-btn"
+                type="primary"
+                size="small"
+                @click="saveComment"
+            >
+              发送
+            </el-button>
+          </div>
         </div>
 
       </div>
@@ -783,6 +951,181 @@ $front-font-color: #d54941;
     color: #999;
     display: block;
     margin-bottom: 16px;
+  }
+}
+
+.comment-section {
+  margin-top: 20px;
+}
+
+.comment-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 16px;
+
+  .comment-count {
+    font-size: 14px;
+    color: #666;
+  }
+}
+
+.comment-list {
+  .comment-thread {
+    margin-bottom: 16px;
+  }
+}
+
+.comment-item {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  &.comment-sub-item {
+    margin-left: 40px;
+    padding: 12px;
+    background-color: #f8f8f8;
+    border-radius: 8px;
+  }
+
+  .comment-avatar {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .comment-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .comment-user {
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 4px;
+
+    .reply-target {
+      color: #1890ff;
+      font-weight: normal;
+    }
+  }
+
+  .comment-text {
+    font-size: 14px;
+    line-height: 1.4;
+    color: #333;
+    margin-bottom: 8px;
+    word-break: break-word;
+  }
+
+  .comment-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: #999;
+
+    .comment-time {
+      color: #999;
+    }
+
+    .comment-reply-btn,
+    .comment-delete-btn {
+      font-size: 12px;
+      color: #666;
+      padding: 0;
+      height: auto;
+
+      &:hover {
+        color: #1890ff;
+      }
+    }
+
+    .comment-delete-btn:hover {
+      color: #ff4d4f;
+    }
+  }
+
+  .comment-reply {
+    margin-top: 12px;
+    padding: 12px;
+    background-color: #f5f5f5;
+    border-radius: 6px;
+
+    .reply-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+  }
+}
+
+.comments-bottom-spacer {
+  height: 20px;
+}
+
+.interaction-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 20px;
+  border-top: 1px solid #f0f0f0;
+  background-color: #fff;
+
+  .interaction-stats {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 12px;
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      color: #666;
+      font-size: 14px;
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: #ff2442;
+      }
+    }
+  }
+
+  .comment-input-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+
+    .comment-input {
+      flex: 1;
+
+      :deep(.el-input__wrapper) {
+        border-radius: 20px;
+        background-color: #f8f8f8;
+        border: 1px solid #e0e0e0;
+
+        &.is-focus {
+          border-color: #1890ff;
+          background-color: #fff;
+        }
+      }
+    }
+
+    .comment-send-btn {
+      border-radius: 16px;
+      padding: 8px 16px;
+    }
   }
 }
 
