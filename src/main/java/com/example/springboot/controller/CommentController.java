@@ -135,7 +135,7 @@ public class CommentController {
         queryWrapper.orderByDesc(Comment::getId);
 
         if (StrUtil.isNotBlank(keyword)) {
-            queryWrapper.like(Comment::getNickname, keyword);
+            queryWrapper.like(Comment::getContent, keyword);
         }
 
         return Result.success(commentService.page(new Page<>(pageNum, pageSize), queryWrapper));

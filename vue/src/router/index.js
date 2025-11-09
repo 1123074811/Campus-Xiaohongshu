@@ -153,7 +153,15 @@ const routes = [
         name: 'BackBlog',
         component: () => import('../views/back/Blog.vue'),
         meta: {
-          title: '分类管理'
+          title: '博客管理'
+        }
+      },
+      {
+        path: 'comment',
+        name: 'BackComment',
+        component: () => import('../views/back/Comment.vue'),
+        meta: {
+          title: '评论管理'
         }
       },
       {

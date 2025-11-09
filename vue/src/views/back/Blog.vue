@@ -191,23 +191,7 @@ loadUsers()
 
 //定义富文本数据
 const htmlContent = ref('');
-const editorRefContent = shallowRef();
-//富文本自定义上传方法
-const customUpload = (file, insertFn) => {
-  const formData = new FormData()
-  formData.append('file', file)
-  axios({
-    url: `${serverHost}/web/upload`,
-    method: 'post',
-    data: formData,
-    headers: {'Content-Type': 'multipart/form-data'},
-  }).then(res => {
-    insertFn(res.data)
-  }).catch((error) => {
-    console.error('上传失败:', error)
-    ElMessage.error('上传失败')
-  })
-}
+const editorRefContent = ref(null);
 
 //wangEditor 配置
 const editorConfig = {
@@ -215,12 +199,42 @@ const editorConfig = {
   MENU_CONF: {
     uploadImage: {
       customUpload: async (file, insertFn) => {
-        customUpload(file, insertFn)
+        const formData = new FormData()
+        formData.append('file', file)
+        try {
+          const res = await axios({
+            url: `${serverHost}/web/upload`,
+            method: 'post',
+            data: formData,
+            headers: {'Content-Type': 'multipart/form-data'},
+          })
+          if (insertFn && typeof insertFn === 'function') {
+            insertFn(res.data)
+          }
+        } catch (error) {
+          console.error('上传失败:', error)
+          ElMessage.error('上传失败')
+        }
       },
     },
     uploadVideo: {
       customUpload: async (file, insertFn) => {
-        customUpload(file, insertFn)
+        const formData = new FormData()
+        formData.append('file', file)
+        try {
+          const res = await axios({
+            url: `${serverHost}/web/upload`,
+            method: 'post',
+            data: formData,
+            headers: {'Content-Type': 'multipart/form-data'},
+          })
+          if (insertFn && typeof insertFn === 'function') {
+            insertFn(res.data)
+          }
+        } catch (error) {
+          console.error('上传失败:', error)
+          ElMessage.error('上传失败')
+        }
       },
     },
   }
@@ -264,12 +278,12 @@ const viewContent = (content) => {
         <el-table-column prop="name" label="博客标题" />
         <el-table-column prop="typeId" label="分类">
           <template #default="scope">
-            {{types.find(item=> item.id === scope.row.typeId).name}}
+            {{types.find(item=> item.id === scope.row.typeId)?.name || '-'}}
           </template>
         </el-table-column>
         <el-table-column prop="userId" label="用户">
           <template #default="scope">
-            {{users.find(item=> item.id === scope.row.userId).nickname}}
+            {{users.find(item=> item.id === scope.row.userId)?.nickname || '-'}}
           </template>
         </el-table-column>
         <el-table-column prop="time" label="时间" />
@@ -375,7 +389,7 @@ const viewContent = (content) => {
                 v-model="htmlContent"
                 :defaultConfig="editorConfig"
                 mode="default"
-                @onCreated="editorRefContent = $event"
+                @onCreated="(editor) => { editorRefContent.value = editor }"
             />
           </div>
         </el-form-item>
