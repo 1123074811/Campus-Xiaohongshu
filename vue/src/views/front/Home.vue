@@ -270,7 +270,7 @@ const collect = (id) => {
 const isFollowed = ref(false)
 
 const checkFollow = (id) => {
-  request.get("/follow/check/" + id).then(res => {
+  request.get("/follow/checkFollow/" + id).then(res => {
     if (res.code === '200') {
       isFollowed.value = true
     } else {
@@ -351,7 +351,7 @@ const follow = (id) => {
         <div class="content-scroll-area">
           <!-- 用户信息和关注按钮 -->
           <div class="user-info">
-            <img :src="users.find(user=>user.id===blog.userId)?.avatarUrl" alt="User Avatar" class="user-avatar">
+            <img :src="users.find(user=>user.id===blog.userId)?.avatarUrl" alt="User Avatar" class="user-avatar" @click="router.push('/front/user?id='+blog.userId)" style="cursor: pointer">
             <span class="user-name" @click="router.push('/front/user?id='+blog.userId)">{{ users.find(user=>user.id===blog.userId)?.nickname }}</span>
             <button
                 class="follow-button"

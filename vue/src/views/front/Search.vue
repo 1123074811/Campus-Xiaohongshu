@@ -279,7 +279,7 @@ const collect = (id) => {
 const isFollowed = ref(false)
 
 const checkFollow = (id) => {
-  request.get("/follow/check/" + id).then(res => {
+  request.get("/follow/checkFollow/" + id).then(res => {
     if (res.code === '200') {
       isFollowed.value = true
     } else {
