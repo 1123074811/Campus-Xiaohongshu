@@ -2,8 +2,9 @@
 import {ref, onMounted, reactive, computed, nextTick} from "vue";
 import request from "@/utils/request.js";
 import { Star, StarFilled } from '@element-plus/icons-vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 
+const route = useRoute();
 const router = useRouter();
 import {ElMessage} from "element-plus";
 
@@ -39,7 +40,7 @@ const changeTypeId = (id) => {
 const tableData = ref([])
 const total = ref(0)
 const pageNum = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(15)
 
 // 加载数据
 const loadBlog = (loadMore) => {
