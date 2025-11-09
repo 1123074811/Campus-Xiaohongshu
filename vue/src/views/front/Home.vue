@@ -113,6 +113,7 @@ const showBlog = (item, event) => {
 
   blog.value = item
   commentItemId.value = item.id
+  checkFollow(blog.value.userId)
   loadComment()
 
   const clickedElement = event.currentTarget
@@ -261,6 +262,32 @@ const collect = (id) => {
       blog.value.isCollected = false;
       blog.value.count--;
       loadBlog()
+    }
+  });
+};
+
+const isFollowed = ref(false)
+
+const checkFollow = (id) => {
+  request.get("/follow/check/" + id).then(res => {
+    if (res.code === '200') {
+      isFollowed.value = true
+    } else {
+      isFollowed.value = false
+    }
+  });
+};
+
+const follow = (id) => {
+  request.post("/follow", {
+    itemId: id
+  }).then(res => {
+    if (res.code === '200') {
+      ElMessage.success("关注成功");
+      isFollowed.value = true;
+    } else {
+      ElMessage.error(res.msg || '关注失败');
+      isFollowed.value = false;
     }
   });
 };

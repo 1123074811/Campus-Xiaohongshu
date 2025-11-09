@@ -165,6 +165,22 @@ const routes = [
         }
       },
       {
+        path: 'collect',
+        name: 'BackCollect',
+        component: () => import('../views/back/Collect.vue'),
+        meta: {
+          title: '收藏管理'
+        }
+      },
+      {
+        path: 'follow',
+        name: 'BackFollow',
+        component: () => import('../views/back/Follow.vue'),
+        meta: {
+          title: '关注管理'
+        }
+      },
+      {
         path: 'admin',
         name: 'BackAdmin',
         component: () => import('../views/back/Admin.vue'),

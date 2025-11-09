@@ -74,7 +74,7 @@ public class CollectController {
         queryWrapper.orderByDesc(Collect::getId);
 
         if (StrUtil.isNotBlank(keyword)) {
-            queryWrapper.like(Collect::getId, keyword);
+            queryWrapper.like(Collect::getItemId, keyword);
         }
 
         return Result.success(collectService.page(new Page<>(pageNum, pageSize), queryWrapper));
