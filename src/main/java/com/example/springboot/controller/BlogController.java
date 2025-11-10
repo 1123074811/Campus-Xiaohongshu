@@ -51,7 +51,9 @@ public class BlogController {
 
     @GetMapping
     public Result findAll() {
-        return Result.success(blogService.list());
+        LambdaQueryWrapper<Blog> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Blog::getUserId, TokenUtils.getCurrentUser().getId());
+        return Result.success(blogService.list(queryWrapper));
     }
 
     @GetMapping("/{id}")

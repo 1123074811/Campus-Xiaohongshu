@@ -1,12 +1,17 @@
 package com.example.springboot.controller;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.springboot.common.Result;
 import com.example.springboot.entity.Account;
+import com.example.springboot.entity.Blog;
 import com.example.springboot.entity.Collect;
+import com.example.springboot.entity.Message;
+import com.example.springboot.service.IBlogService;
 import com.example.springboot.service.ICollectService;
+import com.example.springboot.service.IMessageService;
 import com.example.springboot.utils.TokenUtils;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +29,10 @@ public class CollectController {
 
     @Resource
     private ICollectService collectService;
+    @Resource
+    private IMessageService messageService;
+    @Resource
+    private IBlogService blogService;
 
     @PostMapping
     public Result save(@RequestBody Collect collect) {
@@ -34,6 +43,24 @@ public class CollectController {
 
         try {
             collectService.saveOrUpdate(collect);
+
+            try {
+                Message message = new Message();
+                message.setText("收藏了你的笔记！");
+                message.setType("收藏");
+                message.setTime(DateUtil.now());
+                message.setFromUserId(account.getId());
+                message.setItemId(collect.getItemId());
+                Blog blog = blogService.getById(collect.getItemId());
+                if (blog != null) {
+                    message.setToUserId(blog.getUserId());
+                    messageService.save(message);
+                }
+            } catch (Exception e) {
+                // 消息保存失败不应该影响收藏功能
+                e.printStackTrace();
+            }
+
         } catch (Exception e) {
             //在收藏表中设置索引，如果报错了，说明该用户已经收藏了该博客，则将则条收藏删掉，相当于点击一次收藏，再点击取消收藏
             LambdaQueryWrapper<Collect> queryWrapper = new LambdaQueryWrapper<>();

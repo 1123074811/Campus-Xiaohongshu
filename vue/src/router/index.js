@@ -181,6 +181,14 @@ const routes = [
         }
       },
       {
+        path: 'message',
+        name: 'BackMessage',
+        component: () => import('../views/back/Message.vue'),
+        meta: {
+          title: '消息管理'
+        }
+      },
+      {
         path: 'admin',
         name: 'BackAdmin',
         component: () => import('../views/back/Admin.vue'),
