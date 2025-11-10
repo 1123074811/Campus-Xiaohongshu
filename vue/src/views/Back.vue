@@ -85,7 +85,12 @@ const handleUpdateAccount = (updatedAccount) => {
                   <span>个人信息</span>
                 </router-link>
               </el-dropdown-item>
-              <!--个人信息页面-->
+              <el-dropdown-item>
+                <router-link to="/front/home" class="dropdown-link">
+                  <el-icon><House /></el-icon>
+                  <span>回到前台</span>
+                </router-link>
+              </el-dropdown-item>
               <el-dropdown-item>
                 <router-link to="/back/password" class="dropdown-link">
                   <el-icon><Lock /></el-icon>
@@ -117,12 +122,12 @@ const handleUpdateAccount = (updatedAccount) => {
 
           <!--后台菜单-->
 
-          <el-menu-item index="/back/home">
+          <el-menu-item index="/back/home" v-if="account.role==='ROLE_ADMIN'">
             <el-icon><House /></el-icon>
             <template #title>后台首页</template>
           </el-menu-item>
 
-          <el-menu-item index="/back/type">
+          <el-menu-item index="/back/type" v-if="account.role==='ROLE_ADMIN'">
             <el-icon><Setting /></el-icon>
             <template #title>分类管理</template>
           </el-menu-item>
@@ -132,22 +137,22 @@ const handleUpdateAccount = (updatedAccount) => {
             <template #title>博客管理</template>
           </el-menu-item>
 
-          <el-menu-item index="/back/comment">
+          <el-menu-item index="/back/comment" v-if="account.role==='ROLE_ADMIN'">
             <el-icon><ChatDotSquare /></el-icon>
             <template #title>评论管理</template>
           </el-menu-item>
 
-          <el-menu-item index="/back/collect">
+          <el-menu-item index="/back/collect" v-if="account.role==='ROLE_ADMIN'">
             <el-icon><Star /></el-icon>
             <template #title>收藏管理</template>
           </el-menu-item>
 
-          <el-menu-item index="/back/follow">
+          <el-menu-item index="/back/follow" v-if="account.role==='ROLE_ADMIN'">
             <el-icon><CirclePlus /></el-icon>
             <template #title>关注管理</template>
           </el-menu-item>
 
-          <el-menu-item index="/back/message">
+          <el-menu-item index="/back/message" v-if="account.role==='ROLE_ADMIN'">
             <el-icon><Message /></el-icon>
             <template #title>消息管理</template>
           </el-menu-item>

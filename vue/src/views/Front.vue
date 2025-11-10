@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { projectName } from '../../config/config.default'
-import { User, Lock, SwitchButton, VideoCamera, Bell, House } from '@element-plus/icons-vue'
+import { User, Lock, SwitchButton, VideoCamera, Bell, House, PictureRounded } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 // 路由实例
@@ -127,6 +127,12 @@ const search = () => {
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item>{{ account.nickname }}</el-dropdown-item>
+              <el-dropdown-item>
+                <router-link to="/back/blog" class="dropdown-link">
+                  <el-icon><PictureRounded /></el-icon>
+                  <span>管理作品</span>
+                </router-link>
+              </el-dropdown-item>
               <el-dropdown-item>
                 <router-link to="/front/person" class="dropdown-link">
                   <el-icon><User /></el-icon>

@@ -150,7 +150,10 @@ public class WebController {
 
     /**
      * 文件下载接口
-     *  @param fileUUID 根据文件UUID找到特定文件
+     *
+     * @param fileUUID
+     * @param response
+     * @throws IOException
      */
     @GetMapping("/download/{fileUUID}")
     public void download(@PathVariable String fileUUID, HttpServletResponse response) throws IOException {
@@ -158,8 +161,22 @@ public class WebController {
         File uploadFile = new File(FILE_UPLOAD_PATH + fileUUID);
         // 设置输出流的格式
         ServletOutputStream os = response.getOutputStream();
-        response.addHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(fileUUID, "UTF-8"));
-        response.setContentType("application/octet-stream");
+
+        if (fileUUID.contains(".mp4")){
+            //用于配置视频格式的请求头，如果不设置，会因为谷歌浏览器流媒体策略导致前端video标签中的视频进度条功能失效
+            response.setContentType("video/mpeg4");
+            response.setContentLength((int) uploadFile.length());
+            response.setHeader("Accept-Ranges", "bytes");
+        }else if (fileUUID.contains(".mp3")){
+            //用于配置音频格式的请求头，如果不设置，会因为谷歌浏览器流媒体策略导致前端audio标签中的音频进度条功能失效
+            response.setContentType("audio/mpeg");
+            response.setContentLength((int) uploadFile.length());
+            response.setHeader("Accept-Ranges", "bytes");
+        }else {
+            //用于配置常规文件的请求头
+            response.addHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(fileUUID, "UTF-8"));
+            response.setContentType("application/octet-stream");
+        }
 
         // 读取文件的字节流
         try {

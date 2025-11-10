@@ -1,6 +1,7 @@
 package com.example.springboot.controller;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -36,6 +37,11 @@ public class BlogController {
 
     @PostMapping
     public Result save(@RequestBody Blog blog) {
+        if (blog.getUserId() == null) {
+            blog.setUserId(TokenUtils.getCurrentUser().getId());
+            blog.setTime(DateUtil.now());
+        }
+
         return Result.success(blogService.saveOrUpdate(blog));
     }
 
@@ -71,6 +77,11 @@ public class BlogController {
 
         if (StrUtil.isNotBlank(keyword)) {
             queryWrapper.like(Blog::getName, keyword);
+        }
+
+        Account account = TokenUtils.getCurrentUser();
+        if (!StrUtil.equals(account.getRole(), "ROLE_ADMIN")){
+            queryWrapper.eq(Blog::getUserId, account.getId());
         }
 
         return Result.success(blogService.page(new Page<>(pageNum, pageSize), queryWrapper));
