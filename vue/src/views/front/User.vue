@@ -385,7 +385,7 @@ const toUser = (userId) =>{
       <div class="tab-item" :class="{ active: activeTab === '笔记' }" @click="switchTab('笔记')">
         笔记
       </div>
-      <div class="tab-item" :class="{ active: activeTab === '收藏' }" @click="switchTab('收藏')" v-if="account.id==id">
+      <div class="tab-item" :class="{ active: activeTab === '收藏' }" @click="switchTab('收藏')" v-if="account.id==id || (userInfo.showCollect !== 'false')">
         收藏
       </div>
     </div>

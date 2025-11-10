@@ -31,5 +31,7 @@ public class User extends Account {
     private String phone;
 
     private String info;
+    
+    private String showCollect;
 
 }

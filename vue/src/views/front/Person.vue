@@ -18,6 +18,10 @@ const getAccount = () => {
   request.get('/web/userInfo').then(res => {
     if (res.code === '200' && res.data) {
       Object.assign(form, res.data)
+      // 如果用户未设置showCollect字段，默认为'false'
+      if (form.showCollect === undefined) {
+        form.showCollect = 'false'
+      }
     } else {
       ElMessage.error(res.msg)
     }
@@ -34,9 +38,10 @@ const save = () => {
     if (res.code === '200') {
       ElMessage.success('保存成功')
 
-      // 只更新昵称和头像到 account 对象，其他属性保持不变
+      // 更新用户对象的相应属性
       if (form.nickname) account.value.nickname = form.nickname
       if (form.avatarUrl) account.value.avatarUrl = form.avatarUrl
+      if (form.showCollect !== undefined) account.value.showCollect = form.showCollect
 
       // 更新浏览器存储的用户信息
       localStorage.setItem('account', JSON.stringify(account.value))
@@ -55,6 +60,11 @@ const handleAvatarSuccess = (res) => {
   form.avatarUrl = res
 }
 
+const collectOptions = [
+  { label: '是', value: 'true' },
+  { label: '否', value: 'false' },
+]
+
 </script>
 
 <template>
@@ -62,7 +72,7 @@ const handleAvatarSuccess = (res) => {
     <el-card class="person-card">
       <h2 class="card-title">个人信息</h2>
 
-      <el-form label-width="80px">
+      <el-form label-width="100px">
         <div class="avatar-container">
           <el-upload :action="`${serverHost}/web/upload`" :show-file-list="false" :on-success="handleAvatarSuccess">
             <img v-if="form.avatarUrl" :src="form.avatarUrl" class="avatar">
@@ -81,6 +91,19 @@ const handleAvatarSuccess = (res) => {
         </el-form-item>
         <el-form-item label="电话">
           <el-input v-model="form.phone" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="是否展示收藏">
+          <el-select
+              v-model="form.showCollect"
+              size="large"
+              style="width: 100%">
+            <el-option
+                v-for="item in collectOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value">
+            </el-option>
+          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="save">保存修改</el-button>
