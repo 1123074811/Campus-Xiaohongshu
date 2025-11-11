@@ -189,6 +189,14 @@ const routes = [
         }
       },
       {
+        path: 'word',
+        name: 'BackWord',
+        component: () => import('../views/back/Word.vue'),
+        meta: {
+          title: '敏感词管理'
+        }
+      },
+      {
         path: 'admin',
         name: 'BackAdmin',
         component: () => import('../views/back/Admin.vue'),

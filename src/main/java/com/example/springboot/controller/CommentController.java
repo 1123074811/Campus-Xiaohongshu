@@ -7,8 +7,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.springboot.common.Result;
 import com.example.springboot.entity.Comment;
 import com.example.springboot.entity.User;
+import com.example.springboot.entity.Word;
 import com.example.springboot.service.ICommentService;
 import com.example.springboot.service.IUserService;
+import com.example.springboot.service.IWordService;
+import com.example.springboot.utils.DFAUtil;
 import com.example.springboot.utils.TokenUtils;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +35,10 @@ public class CommentController {
 
     @Resource
     private IUserService userService;
+    @Resource
+    private IWordService wordService;
+    @Resource
+    private DFAUtil dfaUtil;
 
     // 新增或者更新
     @PostMapping
@@ -60,6 +67,11 @@ public class CommentController {
                 }
             }
         }
+
+        String[] words = wordService.list().stream().map(Word::getName).collect(Collectors.toList()).toArray(new String[0]);
+        dfaUtil.addSensitiveWords(words);
+        comment.setContent(dfaUtil.replace(comment.getContent(), '*'));
+
         commentService.saveOrUpdate(comment);
         return Result.success();
     }
