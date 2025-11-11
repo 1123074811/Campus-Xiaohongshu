@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { projectName } from '../../config/config.default'
-import { User, Lock, SwitchButton, VideoCamera, Bell, House, PictureRounded } from '@element-plus/icons-vue'
+import { User, Lock, SwitchButton, House, VideoCamera, Bell,PictureRounded} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 // 路由实例
@@ -17,6 +17,46 @@ const account = ref(
 // 当前激活的菜单项
 const activeMenu = computed(() => route.path)
 
+// 侧边栏菜单项
+const sidebarMenus = ref([
+  {
+    name: '发现',
+    icon: 'House',
+    path: '/front/home',
+    active: true
+  },
+  {
+    name: '发布',
+    icon: 'VideoCamera',
+    path: '/front/publish',
+    active: false
+  },
+  {
+    name: '通知',
+    icon: 'Bell',
+    path: '/front/message',
+    active: false
+  },
+  {
+    name: '我',
+    icon: 'User',
+    path: '/front/user?id='+account.value.id,
+    active: false
+  }
+])
+
+// 当前激活的侧边栏菜单
+const activeSidebarMenu = ref('/front/home')
+
+// 切换侧边栏菜单
+const switchSidebarMenu = (menu) => {
+  activeSidebarMenu.value = menu.path
+  sidebarMenus.value.forEach(item => {
+    item.active = item.path === menu.path
+  })
+  router.push(menu.path)
+}
+
 // 退出登录
 const logout = () => {
   localStorage.removeItem('account')
@@ -29,60 +69,27 @@ const handleUpdateAccount = (updatedAccount) => {
   account.value = updatedAccount
 }
 
-const activeLeftMenu = ref('/front/home')
-
-const menus = ref([
-    {
-      path:'/front/home',
-      name:'发现',
-      icon: 'House',
-    },
-    {
-      path:'/front/publish',
-      name:'发布',
-      icon: 'VideoCamera',
-    },
-    {
-      path:'/front/message',
-      name:'通知',
-      icon: 'Bell',
-    },
-    {
-      path:'/front/user',
-      name:'我',
-      icon: 'avatar',
-    },
-])
-
-const changeActivityMenu = (menu) =>{
-  activeLeftMenu.value = menu.path
-
-  router.push(menu.path)
-}
-
 const keyword = ref('')
 
-const search = () => {
-  router.push({
-    path: '/front/search',
-    query: {
-      keyword: keyword.value
-    }
-  })
+const search = ()=>{
+  location.href = '/front/search?keyword=' + keyword.value || ''
+}
+
+const clearSearch =()=> {
+  location.href = '/front/search?keyword=' + ''
 }
 
 </script>
 
 <template>
 
-<!--  回到顶部-->
   <el-backtop :right="50" :bottom="50" />
 
   <div class="front-container">
     <!-- 顶部导航栏 -->
     <header class="header-nav">
       <div class="header-left-warp">
-        <div class="logo-warp">
+        <div class="logo-warp" @click="router.push('/front/home')">
           <div class="logo">
             <img src="../../config/logo.svg" alt="Logo" />
           </div>
@@ -97,15 +104,15 @@ const search = () => {
               :ellipsis="false"
           >
             <!--前台路由-->
-<!--            <el-menu-item index="/front/home">前台首页</el-menu-item>-->
+            <!--            <el-menu-item index="/front/home">前台首页</el-menu-item>-->
             <!--前台路由-->
           </el-menu>
         </div>
       </div>
 
-      <div style="display: flex">
-        <el-input v-model="keyword" size="large" placeholder="请输入小红书" prefix-icon="Search" clearable style="width: 406px"/>
-        <el-button type="danger" size="large" style="margin-left: 5px" @click="search">搜索</el-button>
+      <div style="display: flex;justify-content: space-around;">
+        <el-input size="large" v-model="keyword" @clear="clearSearch" clearable placeholder="搜索小红书" style="width:400px"></el-input>
+        <el-button size="large" type="danger" @click="search" style="margin-left: 5px">搜索</el-button>
       </div>
 
       <div class="user-warp">
@@ -159,29 +166,25 @@ const search = () => {
 
     <!-- 主内容区域 -->
     <div class="main-content">
-
-
-      <div style="width: 20%">
-
-      <!---左侧菜单部分-->
-      <div style="margin-left: 150px;margin-top: 20px">
-        <div class="menu-item" v-for="menu in menus" :key="menu.path" @click="changeActivityMenu(menu)" :class="{activeMenu: menu.path===activeMenu}">
-          <div style="font-size: 20px;display: flex; align-items: center">
-            <el-icon v-if="menu.icon==='House'"><House /></el-icon>
-            <el-icon v-if="menu.icon==='VideoCamera'"><VideoCamera /></el-icon>
-            <el-icon v-if="menu.icon==='Bell'"><Bell /></el-icon>
-            <div v-if="menu.icon==='avatar'">
-              <el-avatar :src="account.avatarUrl" :size="20"></el-avatar>
+      <div class="main-left">
+        <!-- 侧边栏导航 -->
+        <div class="sidebar-nav">
+          <div class="sidebar-menu">
+            <!-- 主要菜单项 -->
+            <div v-for="menu in sidebarMenus" class="sidebar-menu-item" :class="{ 'active': activeSidebarMenu === menu.path }" @click="switchSidebarMenu(menu)">
+              <div class="menu-icon">
+                <el-icon v-if="menu.icon === 'House'"><House /></el-icon>
+                <el-icon v-else-if="menu.icon === 'VideoCamera'"><VideoCamera /></el-icon>
+                <el-icon v-else-if="menu.icon === 'Bell'"><Bell /></el-icon>
+                <el-avatar v-else :src="account.avatarUrl" :size="24"></el-avatar>
+              </div>
+              <span class="menu-text">{{ menu.name }}</span>
             </div>
           </div>
-          <div style="display: flex; align-items: center">
-            {{menu.name}}
-          </div>
+
         </div>
       </div>
-      </div>
-      <div style="flex: 1; padding: 20px; position: relative;">
-        <!---右侧内容部分-->
+      <div class="main-right">
         <router-view @update-account="handleUpdateAccount"></router-view>
       </div>
     </div>
@@ -200,32 +203,6 @@ $front-back-color: #fff;
 
 /*定义前台头部 字体 主题色*/
 $front-font-color: #d54941;
-
-.menu-item {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-  height: 40px;
-  padding: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border-radius: 20px;
-}
-
-.menu-item:hover {
-  background-color: #f5f5f5;
-  border-radius: 20px;
-}
-
-/* 提高activeMenu的优先级，确保选中状态覆盖悬浮状态 */
-.menu-item.activeMenu,
-.menu-item.activeMenu:hover {
-  background-color: #fff2f0;
-  border-radius: 20px;
-  color: #d54941;
-}
-
-
 
 .front-container {
   min-height: 100vh;
@@ -252,6 +229,7 @@ $front-font-color: #d54941;
     height: 100%;
 
     .logo-warp {
+      cursor: pointer;
       display: flex;
       align-items: center;
       margin-left: 20px;
@@ -354,7 +332,79 @@ $front-font-color: #d54941;
   flex: 1;
   background-color: #fff;
   display: flex;
-  gap: 20px;
+  gap: 30px;
+
+  .main-left{
+    width: 20%;
+    padding: 20px 0;
+
+    .sidebar-nav {
+      position: sticky;
+      top: 90px;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 90px);
+
+      .sidebar-menu {
+        flex: 1;
+        padding: 0 20px;
+        margin-left: 100px;
+      }
+
+      .sidebar-menu-item {
+        display: flex;
+        align-items: center;
+        padding: 16px 12px;
+        margin-bottom: 8px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: #333;
+        font-size: 16px;
+        font-weight: 500;
+
+        &:hover {
+          background-color: #f8f8f8;
+        }
+
+        &.active {
+          background-color: #fff2f0;
+          color: $front-font-color;
+          border-radius: 20px;
+
+          .menu-icon {
+            color: $front-font-color;
+          }
+        }
+
+        .menu-icon {
+          width: 24px;
+          height: 24px;
+          margin-right: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #666;
+          font-size: 24px;
+
+          .el-icon {
+            font-size: 24px;
+          }
+        }
+
+        .menu-text {
+          flex: 1;
+          font-size: 16px;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+
+  .main-right{
+    flex: 1;
+  }
+
 }
 
 .front-footer {
