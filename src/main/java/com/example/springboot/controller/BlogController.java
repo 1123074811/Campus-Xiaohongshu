@@ -3,14 +3,18 @@ package com.example.springboot.controller;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.springboot.common.Result;
 import com.example.springboot.entity.Account;
 import com.example.springboot.entity.Blog;
 import com.example.springboot.entity.Collect;
+import com.example.springboot.entity.Type;
 import com.example.springboot.service.IBlogService;
 import com.example.springboot.service.ICollectService;
+import com.example.springboot.service.ITypeService;
 import com.example.springboot.utils.TokenUtils;
 import jakarta.annotation.Resource;
 import org.apache.el.parser.Token;
@@ -34,6 +38,33 @@ public class BlogController {
     private IBlogService blogService;
     @Resource
     private ICollectService collectService;
+    @Resource
+    private ITypeService typeService;
+
+    @GetMapping("/count")
+    public Result count() {
+
+        List<Type> typeList = typeService.list();
+
+        List<Blog> blogList = blogService.list();
+
+        JSONArray array = new JSONArray();
+
+        for (Type type : typeList){
+            int count = 0;
+            for (Blog blog : blogList){
+                if (Objects.equals(blog.getTypeId(), type.getId())){
+                    count++;
+                }
+            }
+            JSONObject object = new JSONObject();
+            object.set("name", type.getName());
+            object.set("value", count);
+            array.add(object);
+        }
+
+        return Result.success(array);
+    }
 
     @PostMapping
     public Result save(@RequestBody Blog blog) {
