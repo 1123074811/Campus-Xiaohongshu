@@ -8,12 +8,10 @@ import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.springboot.common.Result;
-import com.example.springboot.entity.Account;
-import com.example.springboot.entity.Blog;
-import com.example.springboot.entity.Collect;
-import com.example.springboot.entity.Type;
+import com.example.springboot.entity.*;
 import com.example.springboot.service.IBlogService;
 import com.example.springboot.service.ICollectService;
+import com.example.springboot.service.ILikeService;
 import com.example.springboot.service.ITypeService;
 import com.example.springboot.utils.TokenUtils;
 import jakarta.annotation.Resource;
@@ -40,6 +38,8 @@ public class BlogController {
     private ICollectService collectService;
     @Resource
     private ITypeService typeService;
+    @Resource
+    private ILikeService likeService;
 
     @GetMapping("/count")
     public Result count() {
@@ -137,6 +137,8 @@ public class BlogController {
 
         //拿到所有收藏信息
         List<Collect> collects = collectService.list();
+        //拿到所有点赞信息
+        List<Like> likes = likeService.list();
 
         Account account = TokenUtils.getCurrentUser();
 
@@ -145,18 +147,29 @@ public class BlogController {
             //对于每个博客来说，都应该统计收藏记录
             //1.这个博客被收藏的次数
             //2.这博客是否被当前用户收藏
-            int count = 0;
+            int collectCount = 0;
             for (Collect collect : collects) {
-                //首先判断这个收藏信息是否和当前博客匹配，如果是，说明被收藏一次，则count加1
+                //首先判断这个收藏信息是否和当前博客匹配，如果是，说明被收藏一次，则collectCount加1
                 if (Objects.equals(collect.getItemId(), blog.getId())){  //Integer类型的比较：Objects.equals()
-                    count++;
+                    collectCount++;
                     //如果执行到这里，判断这个博客是否被当前用户收藏了
                     if (Objects.equals(collect.getUserId(), account.getId())){
                         blog.setIsCollected(true);
                     }
                 }
             }
-            blog.setCount(count);
+            blog.setCollectCount(collectCount);
+
+            int likeCount = 0;
+            for (Like like : likes) {
+                if (Objects.equals(like.getItemId(), blog.getId())){
+                    likeCount++;
+                    if (Objects.equals(like.getUserId(), account.getId())){
+                        blog.setIsLiked(true);
+                    }
+                }
+            }
+            blog.setLikeCount(likeCount);
         }
 
         return Result.success(page);
@@ -178,6 +191,8 @@ public class BlogController {
 
         //拿到所有收藏信息
         List<Collect> collects = collectService.list();
+        //拿到所有点赞信息
+        List<Like> likes = likeService.list();
 
         Account account = TokenUtils.getCurrentUser();
 
@@ -186,18 +201,29 @@ public class BlogController {
             //对于每个博客来说，都应该统计收藏记录
             //1.这个博客被收藏的次数
             //2.这博客是否被当前用户收藏
-            int count = 0;
+            int collectCount = 0;
             for (Collect collect : collects) {
                 //首先判断这个收藏信息是否和当前博客匹配，如果是，说明被收藏一次，则count加1
                 if (Objects.equals(collect.getItemId(), blog.getId())){  //Integer类型的比较：Objects.equals()
-                    count++;
+                    collectCount++;
                     //如果执行到这里，判断这个博客是否被当前用户收藏了
                     if (Objects.equals(collect.getUserId(), account.getId())){
                         blog.setIsCollected(true);
                     }
                 }
             }
-            blog.setCount(count);
+            blog.setCollectCount(collectCount);
+
+            int likeCount = 0;
+            for (Like like : likes) {
+                if (Objects.equals(like.getItemId(), blog.getId())){
+                    likeCount++;
+                    if (Objects.equals(like.getUserId(), account.getId())){
+                        blog.setIsLiked(true);
+                    }
+                }
+            }
+            blog.setLikeCount(likeCount);
         }
 
         return Result.success(page);
@@ -247,7 +273,50 @@ public class BlogController {
                     }
                 }
             }
-            blog.setCount(count);
+            blog.setCollectCount(count);
+        }
+
+        return Result.success(page);
+    }
+    @GetMapping("/like/page")
+    public Result findLikePage(@RequestParam Integer pageNum,
+                                @RequestParam Integer pageSize,
+                                @RequestParam Integer userId,
+                                @RequestParam(defaultValue = "") String keyword) {
+
+        LambdaQueryWrapper<Like> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Like::getUserId, userId);
+        List<Like> likes = likeService.list(wrapper);
+        if (CollectionUtil.isEmpty(likes)) return Result.success(likeService.page(new Page<>(pageNum, pageSize), wrapper));
+
+        List<Integer> ids = new ArrayList<>();
+        for (Like like : likes) {
+            ids.add(like.getItemId());
+        }
+
+        LambdaQueryWrapper<Blog> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByDesc(Blog::getId);
+
+        queryWrapper.in(Blog::getId, ids);
+
+        if (StrUtil.isNotBlank(keyword)) {
+            queryWrapper.like(Blog::getName, keyword);
+        }
+
+        Account account = TokenUtils.getCurrentUser();
+
+        Page<Blog> page = blogService.page(new Page<>(pageNum, pageSize), queryWrapper);
+        for (Blog blog : page.getRecords()){
+            int count = 0;
+            for (Like like : likes) {
+                if (Objects.equals(like.getItemId(), blog.getId())){  //Integer类型的比较：Objects.equals()
+                    count++;
+                    if (Objects.equals(like.getUserId(), account.getId())){
+                        blog.setIsLiked(true);
+                    }
+                }
+            }
+            blog.setLikeCount(count);
         }
 
         return Result.success(page);

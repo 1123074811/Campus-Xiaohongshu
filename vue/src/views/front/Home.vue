@@ -1,8 +1,8 @@
 <script setup>
 import {ref, onMounted, reactive, computed, nextTick} from "vue";
 import request from "@/utils/request.js";
-import { Star, StarFilled } from '@element-plus/icons-vue';
-import { useRouter, useRoute } from 'vue-router';
+import {Star, StarFilled} from '@element-plus/icons-vue';
+import {useRouter, useRoute} from 'vue-router';
 
 const route = useRoute();
 const router = useRouter();
@@ -239,12 +239,12 @@ const delComment = (id) => {
 };
 
 const handleReply = (pid) => {
-  commentForm.value = { pid: pid };
+  commentForm.value = {pid: pid};
   replyVisible.value = true;
 };
 
 const cancelReply = () => {
-  commentForm.value = { pid: '' };
+  commentForm.value = {pid: ''};
   replyVisible.value = false;
 };
 
@@ -256,12 +256,31 @@ const collect = (id) => {
     if (res.code === '200') {
       ElMessage.success("收藏成功");
       blog.value.isCollected = true;
-      blog.value.count++;
+      blog.value.collectCount++;
       loadBlog()
     } else {
       ElMessage.error(res.msg || '收藏失败');
       blog.value.isCollected = false;
-      blog.value.count--;
+      blog.value.collectCount--;
+      loadBlog()
+    }
+  });
+};
+
+const like = (id) => {
+  const data = {
+    itemId: id,
+  }
+  request.post("/like", data).then(res => {
+    if (res.code === '200') {
+      ElMessage.success("点赞成功");
+      blog.value.isLiked = true;
+      blog.value.likeCount++;
+      loadBlog()
+    } else {
+      ElMessage.error(res.msg || '点赞失败');
+      blog.value.isLiked = false;
+      blog.value.likeCount--;
       loadBlog()
     }
   });
@@ -305,7 +324,8 @@ const follow = (id) => {
   </div>
 
   <div ref="waterfallContainerRef">
-    <waterfall :data="tableData" :col="col" :width="blogWidth" :gutterWidth="gutterWidth" :loadDistance="30" @loadmore="loadMore" ref="waterfallRef">
+    <waterfall :data="tableData" :col="col" :width="blogWidth" :gutterWidth="gutterWidth" :loadDistance="30"
+               @loadmore="loadMore" ref="waterfallRef">
       <div class="cell-item" v-for="blog in tableData" :key="blog.id" @click="showBlog(blog,$event)">
         <div class="image-container">
           <img :src="blog.img" alt="加载错误"/>
@@ -316,12 +336,51 @@ const follow = (id) => {
           <div class="item-footer">
             <div class="footer-left">
               <img class="item-img" :src="users.find(user=>user.id===blog.userId)?.avatarUrl" alt="User Avatar"/>
-              <div class="name">{{ users.find(user=>user.id===blog.userId)?.nickname }}</div>
+              <div class="name">{{ users.find(user => user.id === blog.userId)?.nickname }}</div>
             </div>
-            <div class="footer-right">
-              <el-icon v-if="blog.isCollected"><StarFilled /></el-icon>
-              <el-icon v-else><Star /></el-icon>
-              <span>{{ blog.count || 0 }}</span>
+            <div class="footer-right" style="gap: 5px">
+              <div style="display: flex">
+                <svg v-if="blog.isLiked" t="1762956264719" class="icon" viewBox="0 0 1024 1024" version="1.1"
+                     xmlns="http://www.w3.org/2000/svg" p-id="37873" width="14" height="14">
+                  <path
+                      d="M64 483.04V872c0 37.216 30.144 67.36 67.36 67.36H192V416.32l-60.64-0.64A67.36 67.36 0 0 0 64 483.04zM857.28 344.992l-267.808 1.696c12.576-44.256 18.944-83.584 18.944-118.208 0-78.56-68.832-155.488-137.568-145.504-60.608 8.8-67.264 61.184-67.264 126.816v59.264c0 76.064-63.84 140.864-137.856 148L256 416.96v522.4h527.552a102.72 102.72 0 0 0 100.928-83.584l73.728-388.96a102.72 102.72 0 0 0-100.928-121.824z"
+                      p-id="37874" fill="#d81e06"></path>
+                </svg>
+                <svg v-else t="1762956264719" class="icon" viewBox="0 0 1024 1024" version="1.1"
+                     xmlns="http://www.w3.org/2000/svg" p-id="37873" width="14" height="14">
+                  <path
+                      d="M64 483.04V872c0 37.216 30.144 67.36 67.36 67.36H192V416.32l-60.64-0.64A67.36 67.36 0 0 0 64 483.04zM857.28 344.992l-267.808 1.696c12.576-44.256 18.944-83.584 18.944-118.208 0-78.56-68.832-155.488-137.568-145.504-60.608 8.8-67.264 61.184-67.264 126.816v59.264c0 76.064-63.84 140.864-137.856 148L256 416.96v522.4h527.552a102.72 102.72 0 0 0 100.928-83.584l73.728-388.96a102.72 102.72 0 0 0-100.928-121.824z"
+                      p-id="37874" fill="#e6e6e6"></path>
+                </svg>
+                <span>{{ blog.likeCount || 0 }}</span>
+              </div>
+              <div>
+                <svg v-if="blog.isCollected" t="1762955885787" class="icon" viewBox="0 0 1024 1024" version="1.1"
+                     xmlns="http://www.w3.org/2000/svg" p-id="36882" id="mx_n_1762955885787" width="14" height="14">
+                  <path
+                      d="M575.12 131l94.74 192a47.68 47.68 0 0 0 35.9 26.08l211.84 30.78c39.11 5.68 54.72 53.74 26.43 81.33l-153.3 149.39a47.68 47.68 0 0 0-13.73 42.2l36.19 211c6.68 39-34.2 68.65-69.18 50.26l-189.46-99.62a47.68 47.68 0 0 0-44.38 0L320.7 914c-35 18.39-75.86-11.31-69.18-50.26l36.19-211A47.68 47.68 0 0 0 274 610.58L120.7 461.16c-28.3-27.58-12.68-75.65 26.43-81.33L359 349.05A47.68 47.68 0 0 0 394.87 323l94.73-192c17.49-35.43 68.03-35.43 85.52 0z"
+                      fill="#FED547" p-id="36883"></path>
+                  <path
+                      d="M943.3 461.77c28.3-27.58 12.68-75.65-26.43-81.33L705 349.66a47.68 47.68 0 0 1-35.9-26.08l-94.74-192c-16.31-33.05-61.35-35.25-81.53-6.65a49.51 49.51 0 0 1 4 6.65l94.74 192a47.68 47.68 0 0 0 35.9 26.08l211.84 30.78c39.11 5.68 54.72 53.74 26.43 81.33L712.47 611.19a47.68 47.68 0 0 0-13.71 42.2l36.19 211a46.76 46.76 0 0 1-11.52 39.81l19.89 10.46c35 18.39 75.86-11.31 69.18-50.26l-36.19-211A47.68 47.68 0 0 1 790 611.19z"
+                      fill="#E2B742" p-id="36884"></path>
+                  <path
+                      d="M263.93 925.77a54 54 0 0 1-53.06-63.05l36.19-211A41.47 41.47 0 0 0 235.13 615L81.85 465.6a53.88 53.88 0 0 1 29.87-91.9l211.83-30.78a41.51 41.51 0 0 0 31.23-22.69l94.73-192a53.89 53.89 0 0 1 96.64 0l94.74 192a41.5 41.5 0 0 0 31.23 22.69L884 373.7a53.88 53.88 0 0 1 29.86 91.9L760.53 615a41.45 41.45 0 0 0-11.93 36.71l36.19 211a53.88 53.88 0 0 1-78.18 56.8l-189.48-99.6a41.49 41.49 0 0 0-38.6 0l-189.47 99.61a53.86 53.86 0 0 1-25.13 6.25z m233.9-815.13a40.71 40.71 0 0 0-37.19 23.12l-94.73 192a53.89 53.89 0 0 1-40.57 29.47L113.5 386a41.48 41.48 0 0 0-23 70.75l153.3 149.39a53.88 53.88 0 0 1 15.5 47.69l-36.19 211a41.48 41.48 0 0 0 60.18 43.73l189.48-99.61a53.81 53.81 0 0 1 50.15 0l189.47 99.61a41.48 41.48 0 0 0 60.18-43.73l-36.19-211a53.86 53.86 0 0 1 15.5-47.69l153.28-149.42a41.48 41.48 0 0 0-23-70.75l-211.82-30.78a53.88 53.88 0 0 1-40.57-29.47L535 133.75a40.71 40.71 0 0 0-37.17-23.12z"
+                      fill="#28CA67" p-id="36885"></path>
+                </svg>
+                <svg v-else t="1762955885787" class="icon" viewBox="0 0 1024 1024" version="1.1"
+                     xmlns="http://www.w3.org/2000/svg" p-id="36882" id="mx_n_1762955885787" width="14" height="14">
+                  <path
+                      d="M575.12 131l94.74 192a47.68 47.68 0 0 0 35.9 26.08l211.84 30.78c39.11 5.68 54.72 53.74 26.43 81.33l-153.3 149.39a47.68 47.68 0 0 0-13.73 42.2l36.19 211c6.68 39-34.2 68.65-69.18 50.26l-189.46-99.62a47.68 47.68 0 0 0-44.38 0L320.7 914c-35 18.39-75.86-11.31-69.18-50.26l36.19-211A47.68 47.68 0 0 0 274 610.58L120.7 461.16c-28.3-27.58-12.68-75.65 26.43-81.33L359 349.05A47.68 47.68 0 0 0 394.87 323l94.73-192c17.49-35.43 68.03-35.43 85.52 0z"
+                      fill="#e6e6e6" p-id="36883"></path>
+                  <path
+                      d="M943.3 461.77c28.3-27.58 12.68-75.65-26.43-81.33L705 349.66a47.68 47.68 0 0 1-35.9-26.08l-94.74-192c-16.31-33.05-61.35-35.25-81.53-6.65a49.51 49.51 0 0 1 4 6.65l94.74 192a47.68 47.68 0 0 0 35.9 26.08l211.84 30.78c39.11 5.68 54.72 53.74 26.43 81.33L712.47 611.19a47.68 47.68 0 0 0-13.71 42.2l36.19 211a46.76 46.76 0 0 1-11.52 39.81l19.89 10.46c35 18.39 75.86-11.31 69.18-50.26l-36.19-211A47.68 47.68 0 0 1 790 611.19z"
+                      fill="#e6e6e6" p-id="36884"></path>
+                  <path
+                      d="M263.93 925.77a54 54 0 0 1-53.06-63.05l36.19-211A41.47 41.47 0 0 0 235.13 615L81.85 465.6a53.88 53.88 0 0 1 29.87-91.9l211.83-30.78a41.51 41.51 0 0 0 31.23-22.69l94.73-192a53.89 53.89 0 0 1 96.64 0l94.74 192a41.5 41.5 0 0 0 31.23 22.69L884 373.7a53.88 53.88 0 0 1 29.86 91.9L760.53 615a41.45 41.45 0 0 0-11.93 36.71l36.19 211a53.88 53.88 0 0 1-78.18 56.8l-189.48-99.6a41.49 41.49 0 0 0-38.6 0l-189.47 99.61a53.86 53.86 0 0 1-25.13 6.25z m233.9-815.13a40.71 40.71 0 0 0-37.19 23.12l-94.73 192a53.89 53.89 0 0 1-40.57 29.47L113.5 386a41.48 41.48 0 0 0-23 70.75l153.3 149.39a53.88 53.88 0 0 1 15.5 47.69l-36.19 211a41.48 41.48 0 0 0 60.18 43.73l189.48-99.61a53.81 53.81 0 0 1 50.15 0l189.47 99.61a41.48 41.48 0 0 0 60.18-43.73l-36.19-211a53.86 53.86 0 0 1 15.5-47.69l153.28-149.42a41.48 41.48 0 0 0-23-70.75l-211.82-30.78a53.88 53.88 0 0 1-40.57-29.47L535 133.75a40.71 40.71 0 0 0-37.17-23.12z"
+                      fill="#e6e6e6" p-id="36885"></path>
+                </svg>
+                <span>{{ blog.collectCount || 0 }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -351,8 +410,11 @@ const follow = (id) => {
         <div class="content-scroll-area">
           <!-- 用户信息和关注按钮 -->
           <div class="user-info">
-            <img :src="users.find(user=>user.id===blog.userId)?.avatarUrl" alt="User Avatar" class="user-avatar" @click="router.push('/front/user?id='+blog.userId)" style="cursor: pointer">
-            <span class="user-name" @click="router.push('/front/user?id='+blog.userId)">{{ users.find(user=>user.id===blog.userId)?.nickname }}</span>
+            <img :src="users.find(user=>user.id===blog.userId)?.avatarUrl" alt="User Avatar" class="user-avatar"
+                 @click="router.push('/front/user?id='+blog.userId)" style="cursor: pointer">
+            <span class="user-name" @click="router.push('/front/user?id='+blog.userId)">{{
+                users.find(user => user.id === blog.userId)?.nickname
+              }}</span>
             <button
                 class="follow-button"
                 :class="{ 'follow-button--followed': isFollowed }"
@@ -398,7 +460,8 @@ const follow = (id) => {
                       </el-button>
                     </div>
                     <div class="comment-reply" v-if="commentForm.pid === item.id && replyVisible">
-                      <el-input v-model="commentForm.contentReply" placeholder="写下你的回复..." size="small"></el-input>
+                      <el-input v-model="commentForm.contentReply" placeholder="写下你的回复..."
+                                size="small"></el-input>
                       <div class="reply-actions">
                         <el-button size="small" type="primary" @click="saveComment">发布</el-button>
                         <el-button size="small" @click="cancelReply">取消</el-button>
@@ -411,7 +474,7 @@ const follow = (id) => {
                 <template v-if="item.children?.length">
                   <div v-for="subItem in item.children" class="comment-item comment-sub-item" :key="subItem.id">
                     <div class="comment-avatar">
-                      <el-image :src="subItem.avatarUrl" />
+                      <el-image :src="subItem.avatarUrl"/>
                     </div>
                     <div class="comment-content">
                       <div class="comment-user">
@@ -432,7 +495,8 @@ const follow = (id) => {
                         </el-button>
                       </div>
                       <div class="comment-reply" v-if="commentForm.pid === subItem.id && replyVisible">
-                        <el-input v-model="commentForm.contentReply" placeholder="写下你的回复..." size="small"></el-input>
+                        <el-input v-model="commentForm.contentReply" placeholder="写下你的回复..."
+                                  size="small"></el-input>
                         <div class="reply-actions">
                           <el-button size="small" type="primary" @click="saveComment">发布</el-button>
                           <el-button size="small" @click="cancelReply">取消</el-button>
@@ -454,10 +518,25 @@ const follow = (id) => {
         <!-- 固定在底部的互动区域，这部分要放在blog-container的div里面 -->
         <div class="interaction-footer">
           <div class="interaction-stats">
+            <span class="stat-item" @click="like(blog.id)">
+                  <svg v-if="blog.isLiked" t="1762945144966" class="icon" viewBox="0 0 1024 1024" version="1.1"
+                       xmlns="http://www.w3.org/2000/svg" p-id="27909" width="14" height="14">
+                    <path
+                        d="M913.92 208.384c-98.816-98.816-258.56-98.816-357.376 0l-41.984 41.984-41.984-41.984c-98.816-98.816-258.56-98.816-357.376 0-98.304 98.816-98.304 258.56 0.512 357.376l52.224 52.224 337.408 337.408c5.632 5.632 14.336 5.632 19.968 0l337.408-337.408 52.224-52.224c97.792-98.816 97.792-258.56-1.024-357.376z"
+                        fill="#d81e06" p-id="27910"></path>
+                  </svg>
+                  <svg v-else t="1762945144966" class="icon" viewBox="0 0 1024 1024" version="1.1"
+                       xmlns="http://www.w3.org/2000/svg" p-id="27909" width="14" height="14">
+                    <path
+                        d="M913.92 208.384c-98.816-98.816-258.56-98.816-357.376 0l-41.984 41.984-41.984-41.984c-98.816-98.816-258.56-98.816-357.376 0-98.304 98.816-98.304 258.56 0.512 357.376l52.224 52.224 337.408 337.408c5.632 5.632 14.336 5.632 19.968 0l337.408-337.408 52.224-52.224c97.792-98.816 97.792-258.56-1.024-357.376z"
+                        fill="#e6e6e6" p-id="27910"></path>
+                  </svg>
+                <span>{{ blog.likeCount || 0 }}</span>
+            </span>
             <span class="stat-item" @click="collect(blog.id)">
-              <el-icon v-if="blog.isCollected"><StarFilled /></el-icon>
-              <el-icon v-else><Star /></el-icon>
-              <span>{{ blog.count || 0 }}</span>
+              <el-icon v-if="blog.isCollected"><StarFilled/></el-icon>
+              <el-icon v-else><Star/></el-icon>
+              <span>{{ blog.collectCount || 0 }}</span>
             </span>
           </div>
 
@@ -545,7 +624,7 @@ $front-font-color: #d54941;
 
     }
 
-    .header-navs{
+    .header-navs {
       margin-left: 80px;
       height: 100%;
 
@@ -625,7 +704,7 @@ $front-font-color: #d54941;
   display: flex;
   gap: 30px;
 
-  .main-left{
+  .main-left {
     width: 20%;
     padding: 20px 0;
 
@@ -692,7 +771,7 @@ $front-font-color: #d54941;
     }
   }
 
-  .main-right{
+  .main-right {
     flex: 1;
   }
 

@@ -36,8 +36,14 @@ public class Blog {
     private String content;
 
     @TableField(exist = false)
-    private Integer count;
+    private Integer collectCount;
 
     @TableField(exist = false)
     private Boolean isCollected;
+
+    @TableField(exist = false)
+    private Integer likeCount;
+
+    @TableField(exist = false)
+    private Boolean isLiked;
 }

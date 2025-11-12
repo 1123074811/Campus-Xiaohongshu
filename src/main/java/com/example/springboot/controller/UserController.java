@@ -5,13 +5,11 @@ import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.springboot.common.Result;
-import com.example.springboot.entity.Blog;
-import com.example.springboot.entity.Collect;
-import com.example.springboot.entity.Follow;
-import com.example.springboot.entity.User;
+import com.example.springboot.entity.*;
 import com.example.springboot.service.IBlogService;
 import com.example.springboot.service.ICollectService;
 import com.example.springboot.service.IFollowService;
+import com.example.springboot.service.ILikeService;
 import com.example.springboot.service.IUserService;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
@@ -36,6 +34,8 @@ public class UserController {
     private ICollectService collectService;
     @Resource
     private IBlogService blogService;
+    @Resource
+    private ILikeService likeService;
 
     @PostMapping
     public Result save(@RequestBody User user) {
@@ -82,6 +82,7 @@ public class UserController {
 
         List<Blog> blogs = blogService.list(blogWrapper);
         List<Collect> collects = collectService.list();
+        List<Like> likes = likeService.list();
 
         int collectCount = 0;
         //遍历所有收藏信息
@@ -94,10 +95,22 @@ public class UserController {
             }
         }
 
+        int likeCount = 0;
+        //遍历所有点赞信息
+        for (Like like : likes) {
+            //遍历所有博客,判断当前博客是否被点赞,如果被点赞则点赞量加1
+            for (Blog blog : blogs) {
+                if (Objects.equals(like.getItemId(), blog.getId())) {
+                    likeCount++;
+                }
+            }
+        }
+
         JSONObject object = new JSONObject();
         object.set("followCount", followCount);
         object.set("followerCount", followerCount);
         object.set("collectCount", collectCount);
+        object.set("likeCount", likeCount);
         return Result.success(object);
     }
 

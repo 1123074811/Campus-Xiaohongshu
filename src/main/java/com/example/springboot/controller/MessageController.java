@@ -43,6 +43,8 @@ public class MessageController {
     public Result findAll() {
         LambdaQueryWrapper<Message> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Message::getToUserId, TokenUtils.getCurrentUser().getId());
+        // 按时间降序排序，最近的消息显示在前面
+        queryWrapper.orderByDesc(Message::getTime);
         return Result.success(messageService.list(queryWrapper));
     }
 
