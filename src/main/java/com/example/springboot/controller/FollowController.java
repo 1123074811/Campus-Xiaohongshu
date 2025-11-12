@@ -1,12 +1,16 @@
 package com.example.springboot.controller;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.springboot.common.Result;
 import com.example.springboot.entity.Account;
+import com.example.springboot.entity.Blog;
 import com.example.springboot.entity.Follow;
+import com.example.springboot.entity.Message;
 import com.example.springboot.service.IFollowService;
+import com.example.springboot.service.IMessageService;
 import com.example.springboot.utils.TokenUtils;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +29,8 @@ public class FollowController {
 
     @Resource
     private IFollowService followService;
+    @Resource
+    private IMessageService messageService;
 
     @PostMapping
     public Result save(@RequestBody Follow follow) {
@@ -40,6 +46,19 @@ public class FollowController {
 
         try {
             followService.saveOrUpdate(follow);
+
+            try {
+                Message message = new Message();
+                message.setText("关注了你！");
+                message.setType("关注");
+                message.setTime(DateUtil.now());
+                message.setFromUserId(account.getId());
+                message.setToUserId(follow.getItemId());
+                messageService.save(message);
+            } catch (Exception e) {
+                // 消息保存失败不应该影响收藏功能
+                e.printStackTrace();
+            }
         } catch (Exception e) {
             LambdaQueryWrapper<Follow> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(Follow::getUserId, account.getId());

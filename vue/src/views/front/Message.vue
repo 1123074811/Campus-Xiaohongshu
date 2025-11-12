@@ -34,7 +34,7 @@ onMounted(() => {
   <div class="content-container">
     <!-- 标题 -->
     <div class="header-title">
-      <h2>收藏通知</h2>
+      <h2>互动消息</h2>
     </div>
 
     <!-- 通知列表 -->
@@ -55,7 +55,7 @@ onMounted(() => {
         </div>
 
         <!-- 关联内容缩略图 -->
-        <div class="content-thumbnail">
+        <div class="content-thumbnail" v-if="message.itemId !== null">
           <img :src="blogs.find(blog => blog.id === message.itemId)?.img" :alt="blogs.find(blog => blog.id === message.itemId)?.name">
         </div>
       </div>
