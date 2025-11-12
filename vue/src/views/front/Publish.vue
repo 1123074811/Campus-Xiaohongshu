@@ -141,7 +141,7 @@ const uploadVideoCoverAndSubmit = () => {
 
   // 组装文件上传对象
   const formData = new FormData()
-  formData.append('file', blob, 'cover.png')
+  formData.append('file', blob, 'cover_' + Date.now() + '.png')  // 增加时间戳确保唯一
 
   // 通过axios发送网络请求到后端上传接口
   axios({

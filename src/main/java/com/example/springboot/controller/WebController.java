@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.example.springboot.common.Constants;
 import com.example.springboot.common.Result;
 import com.example.springboot.entity.Account;
+import com.example.springboot.utils.AliOssUtil;
 import com.example.springboot.utils.TokenUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
@@ -120,31 +121,51 @@ public class WebController {
     }
 
 
+//    /**
+//     * 文件上传接口
+//     *
+//     * @param file 前端传递过来的文件
+//     */
+//    @PostMapping("/upload")
+//    public String upload(@RequestParam MultipartFile file) throws IOException {
+//        String originalFilename = file.getOriginalFilename();
+//        String type = FileUtil.extName(originalFilename);
+//
+//        // 定义一个文件唯一的标识码
+//        String fileUUID = IdUtil.fastSimpleUUID() + StrUtil.DOT + type;
+//
+//        File uploadFile = new File(FILE_UPLOAD_PATH + fileUUID);
+//        // 判断配置的文件目录是否存在，若不存在则创建一个新的文件目录
+//        File parentFile = uploadFile.getParentFile();
+//        if (!parentFile.exists()) {
+//            parentFile.mkdirs();
+//        }
+//
+//        // 文件保存到磁盘
+//        file.transferTo(uploadFile);
+//        // 拼接文件地址
+//        String url = "http://"+ip+":"+port+"/web/download/" + fileUUID;
+//        // 返回文件地址
+//        return url;
+//    }
+
+    @Resource
+    private AliOssUtil aliOssUtil;
+
     /**
-     * 文件上传接口
-     *
-     * @param file 前端传递过来的文件
+     * 文件上传接口 - 改为OSS存储
      */
     @PostMapping("/upload")
     public String upload(@RequestParam MultipartFile file) throws IOException {
         String originalFilename = file.getOriginalFilename();
         String type = FileUtil.extName(originalFilename);
 
-        // 定义一个文件唯一的标识码
+        // 生成唯一文件名
         String fileUUID = IdUtil.fastSimpleUUID() + StrUtil.DOT + type;
 
-        File uploadFile = new File(FILE_UPLOAD_PATH + fileUUID);
-        // 判断配置的文件目录是否存在，若不存在则创建一个新的文件目录
-        File parentFile = uploadFile.getParentFile();
-        if (!parentFile.exists()) {
-            parentFile.mkdirs();
-        }
+        // 上传到OSS
+        String url = aliOssUtil.upload(file.getBytes(), fileUUID);
 
-        // 文件保存到磁盘
-        file.transferTo(uploadFile);
-        // 拼接文件地址
-        String url = "http://"+ip+":"+port+"/web/download/" + fileUUID;
-        // 返回文件地址
         return url;
     }
 
