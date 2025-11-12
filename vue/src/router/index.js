@@ -173,6 +173,14 @@ const routes = [
         }
       },
       {
+        path: 'like',
+        name: 'BackLike',
+        component: () => import('../views/back/Like.vue'),
+        meta: {
+          title: '点赞管理'
+        }
+      },
+      {
         path: 'follow',
         name: 'BackFollow',
         component: () => import('../views/back/Follow.vue'),
