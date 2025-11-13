@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { projectName } from '../../config/config.default'
-import { User, Lock, SwitchButton, House, VideoCamera, Bell,PictureRounded} from '@element-plus/icons-vue'
+import { User, Lock, SwitchButton, House, VideoCamera, Bell,PictureRounded, ChatDotRound} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 // 路由实例
@@ -35,6 +35,12 @@ const sidebarMenus = ref([
     name: '通知',
     icon: 'Bell',
     path: '/front/message',
+    active: false
+  },
+  {
+    name: '聊天',
+    icon: 'ChatDotRound',
+    path: '/front/chat',
     active: false
   },
   {
@@ -176,6 +182,7 @@ const clearSearch =()=> {
                 <el-icon v-if="menu.icon === 'House'"><House /></el-icon>
                 <el-icon v-else-if="menu.icon === 'VideoCamera'"><VideoCamera /></el-icon>
                 <el-icon v-else-if="menu.icon === 'Bell'"><Bell /></el-icon>
+                <el-icon v-else-if="menu.icon === 'ChatDotRound'"><ChatDotRound /></el-icon>
                 <el-avatar v-else :src="account.avatarUrl" :size="24"></el-avatar>
               </div>
               <span class="menu-text">{{ menu.name }}</span>

@@ -1,12 +1,13 @@
 <script setup>
-import {onMounted, reactive, ref, computed, nextTick} from 'vue'
+import {onMounted, reactive, ref, computed, nextTick, watch} from 'vue'
 import request from '../../utils/request'
 import {ElMessage} from "element-plus";
 import {Star, StarFilled} from "@element-plus/icons-vue";
 
-import {useRoute} from "vue-router";
+import {useRoute, useRouter} from "vue-router";
 
 const route = useRoute()
+const router = useRouter()
 // 优先从路由参数获取ID，如果没有则从localStorage获取当前登录用户ID
 const id = ref(route.query.id || (localStorage.getItem('account') ? JSON.parse(localStorage.getItem('account')).id : null))
 
@@ -106,6 +107,14 @@ onMounted(() => {
   loadUsers()
   getWaterfallContainerWidth()
 })
+
+// 监听路由参数变化，当id改变时直接刷新整个页面
+watch(() => route.query.id, (newId) => {
+  if (newId && newId !== id.value) {
+    // 使用router.go()强制重新加载当前路由，确保整个页面刷新
+    router.go(0)
+  }
+}, { immediate: true })
 
 // 瀑布流组件的引用
 const waterfallRef = ref(null)

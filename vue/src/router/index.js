@@ -83,6 +83,14 @@ const routes = [
         }
       },
       {
+        path: 'chat',
+        name: 'FrontChat',
+        component: () => import('../views/front/Chat.vue'),
+        meta: {
+          title: '聊天'
+        }
+      },
+      {
         path: 'user',
         name: 'FrontUser',
         component: () => import('../views/front/User.vue'),
