@@ -10,6 +10,7 @@ import com.example.springboot.service.IUserService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.springboot.exception.ServiceException;
 import com.example.springboot.utils.TokenUtils;
+import cn.hutool.crypto.digest.DigestUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.Resource;
@@ -27,11 +28,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Override
     public Account login(Account account) {
-        User one = getOne(Wrappers.<User>lambdaQuery().eq(User::getUsername, account.getUsername()).eq(User::getPassword, account.getPassword()));
+        // 对用户输入的密码进行MD5加密
+        String encryptedPassword = DigestUtil.md5Hex(account.getPassword());
+        // 使用加密后的密码进行查询
+        User one = getOne(Wrappers.<User>lambdaQuery().eq(User::getUsername, account.getUsername()).eq(User::getPassword, encryptedPassword));
         if (one != null) {
             String role = "ROLE_USER";
             BeanUtils.copyProperties(one,account);
-            String token = TokenUtils.createToken( one.getId() + "-" + role, account.getPassword());
+            // 使用加密后的密码创建token
+            String token = TokenUtils.createToken(one.getId() + "-" + role, one.getPassword());
             account.setToken(token);
             account.setRole(role);
             account.setPassword(null);
@@ -47,6 +52,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if (one == null) {
             one = new User();
             BeanUtils.copyProperties(account, one);
+            // 对密码进行MD5加密后再保存
+            one.setPassword(DigestUtil.md5Hex(account.getPassword()));
             save(one);
         } else {
             throw new ServiceException(Constants.CODE_605, "用户已存在");
@@ -57,8 +64,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     public void updatePassword(Account account) {
         LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(User::getUsername, account.getUsername());
-        wrapper.eq(User::getPassword, account.getPassword());
-        wrapper.set(User::getPassword, account.getNewPassword());
+        // 对原密码进行MD5加密后再比对
+        wrapper.eq(User::getPassword, DigestUtil.md5Hex(account.getPassword()));
+        // 对新密码进行MD5加密后再更新
+        wrapper.set(User::getPassword, DigestUtil.md5Hex(account.getNewPassword()));
         // 执行更新操作
         int updateCount = userMapper.update(null, wrapper);
         // 检查更新结果

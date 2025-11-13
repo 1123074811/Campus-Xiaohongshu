@@ -39,15 +39,17 @@ public class TokenUtils {
 
     /**
      * 生成token
+     * 注意：sign参数现在是经过MD5加密后的密码
      */
     public static String createToken(String data, String sign) {
         return JWT.create().withAudience(data) // 将 userId-role 保存到 token 里面,作为载荷
                 .withExpiresAt(DateUtil.offsetHour(new Date(), 2)) // 2小时后token过期
-                .sign(Algorithm.HMAC256(sign)); // 以 password 作为 token 的密钥
+                .sign(Algorithm.HMAC256(sign)); // 以MD5加密后的密码作为token的密钥
     }
 
     /**
      * 获取当前登录的用户信息
+     * 注意：返回的用户对象中密码字段已经过MD5加密
      */
     public static Account getCurrentUser() {
         try {
