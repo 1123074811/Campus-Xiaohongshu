@@ -41,7 +41,7 @@
       </div>
 
       <!-- 聊天记录区域 -->
-      <div class="chat-history" ref="chatHistory">
+      <div class="chat-history" ref="chatHistoryEl">
         <div v-if="chatHistory.length === 0" class="no-messages">暂无聊天记录，开始聊天吧！</div>
         <transition-group name="message-list" tag="div">
           <template v-for="(msg, index) in chatHistory" :key="msg.id">
@@ -58,7 +58,7 @@
             </div>
           </template>
         </transition-group>
-        <div v-if="isAtBottom" class="at-bottom-tip">已显示全部消息</div>
+        <div v-if="isAtBottom && chatHistory.length > 0" class="at-bottom-tip">已显示全部消息</div>
       </div>
 
       <!-- 消息输入区域 -->
@@ -75,216 +75,326 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, reactive, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
 import request from '@/utils/request'
-export default {
-  name: 'Chat',
-  data() {
-    return {
-      isPolling: false,
-      pollSince: null,
-      pollBackoffMs: 1000,
-      pollMaxBackoffMs: 15000,
-      suggestedInterval: 30000,
-      pollController: null,
-      currentUid: '',
-      friends: [],
-      selectedFriendId: '',
-      selectedFriend: null,
-      chatHistory: [],
-      friendChatHistories: {},
-      message: '',
-      isAtBottom: true
-    }
-  },
-  mounted() {
-    (async () => {
-      this.currentUid = this.getUserId()
-      if (!this.currentUid) {
-        try {
-          const res = await request.get('/web/userInfo')
-          const u = res.data
-          if (u && u.id != null) {
-            const acc = {
-              id: u.id,
-              nickname: u.nickname,
-              avatarUrl: u.avatarUrl
-            }
-            localStorage.setItem('account', JSON.stringify(acc))
-            this.currentUid = String(u.id)
-          }
-        } catch (e) {}
-      }
-      this.loadFriendsList()
-    })()
-  },
-  beforeUnmount() {
-    this.isPolling = false
-    if (this.pollController) this.pollController.abort()
-  },
-  methods: {
-    async loadFriendsList() {
-      try {
-        const res = await request.get('/follow/friend/list')
-        const arr = res.data?.friends || []
-        this.friends = arr.map(x => ({ id: String(x.user_id), nickname: x.nickname, avatarUrl: x.avatar_url }))
-      } catch (e) {}
-    },
-    selectFriend(friend) {
-      this.selectedFriendId = friend.id
-      this.selectedFriend = friend
-      this.loadChatHistory()
-      this.pollSince = null
-      this.startPolling()
-      this.reportRead()
-    },
-    async loadChatHistory() {
-      if (!this.selectedFriendId) return
-      try {
-        const res = await request.get('/chat/history', { params: { uid1: String(this.currentUid), uid2: String(this.selectedFriendId) } })
-        const arr = res.data?.messages || []
-        const msgs = arr.map(x => ({ id: x.id, content: x.content, fromUid: x.fromUid, toUid: x.toUid, sendTime: this.normalizeTs(x.sendTime), isNew: false }))
-        this.chatHistory = msgs
-        this.friendChatHistories[this.selectedFriendId] = [...msgs]
-        this.$nextTick(() => { this.scrollToBottom() })
-      } catch (e) {}
-    },
-    startPolling() {
-      if (this.isPolling) return
-      this.isPolling = true
-      this.pollController = new AbortController()
-      const loop = async () => {
-        if (!this.isPolling) return
-        try {
-          const res = await request.get('/chat/poll', { params: { since: this.pollSince, timeoutSeconds: 30 }, timeout: 35000, signal: this.pollController.signal })
-          const data = res.data || res
-          const list = data.messages || []
-          if (list.length > 0) {
-            list.forEach(m => this.handleChatMessage({ fromUserId: m.fromUid, toUserId: m.toUid, content: m.content, timestamp: this.normalizeTs(m.sendTime) }))
-            this.pollSince = data.next_since || list[list.length - 1].id
-          }
-          this.suggestedInterval = (data.suggested_poll_interval || 30) * 1000
-          this.pollBackoffMs = 1000
-          setTimeout(loop, 0)
-        } catch (e) {
-          if (e?.code === 'ERR_CANCELED') return
-          this.pollBackoffMs = Math.min(this.pollBackoffMs * 2, this.pollMaxBackoffMs)
-          setTimeout(loop, this.pollBackoffMs)
+
+// 响应式数据
+const isPolling = ref(false)
+const pollSince = ref(null)
+const pollBackoffMs = ref(1000)
+const pollMaxBackoffMs = ref(15000)
+const suggestedInterval = ref(30000)
+const pollController = ref(null)
+const currentUid = ref('')
+const friends = ref([])
+const selectedFriendId = ref('')
+const selectedFriend = ref(null)
+const chatHistory = ref([])
+const friendChatHistories = ref({})
+const message = ref('')
+const isAtBottom = ref(true)
+const chatHistoryEl = ref(null) // 修复：统一模板引用名称
+
+// 生命周期
+onMounted(async () => {
+  console.log('Chat component mounted')
+  currentUid.value = getUserId()
+  if (!currentUid.value) {
+    try {
+      const res = await request.get('/web/userInfo')
+      const u = res.data
+      if (u && u.id != null) {
+        const acc = {
+          id: u.id,
+          nickname: u.nickname,
+          avatarUrl: u.avatarUrl
         }
+        localStorage.setItem('account', JSON.stringify(acc))
+        currentUid.value = String(u.id)
+        console.log('Current user ID:', currentUid.value)
       }
-      loop()
-    },
-    async sendMessage() {
-      const content = this.message.trim()
-      if (!content || !this.selectedFriendId) return
-      try {
-        const clientMsgId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-        const res = await request.post('/chat/send', { to_user_id: String(this.selectedFriendId), content, client_msg_id: clientMsgId }, { timeout: 10000 })
-        const serverTs = this.normalizeTs(res.data?.created_at ?? res.data?.sendTime)
-        const sentMessage = { id: res.data?.id || this.generateMsgId(), content, fromUid: this.currentUid, toUid: this.selectedFriendId, sendTime: serverTs, isNew: false }
-        this.chatHistory.push(sentMessage)
-        if (!this.friendChatHistories[this.selectedFriendId]) this.friendChatHistories[this.selectedFriendId] = []
-        this.friendChatHistories[this.selectedFriendId].push(sentMessage)
-        this.scrollToBottom()
-        this.message = ''
-        this.updateFriendLastMessage(this.selectedFriendId, content)
-      } catch (e) {}
-    },
-    handleChatMessage(message) {
-      const chatMessage = { id: this.generateMsgId(), content: message.content || '', fromUid: message.fromUserId, toUid: message.toUserId, sendTime: message.timestamp || Date.now(), isNew: true }
-      if (this.selectedFriendId === message.fromUserId) {
-        this.chatHistory.push(chatMessage)
-        if (!this.friendChatHistories[this.selectedFriendId]) this.friendChatHistories[this.selectedFriendId] = []
-        this.friendChatHistories[this.selectedFriendId].push(chatMessage)
-        this.scrollToBottom()
-      } else {
-        this.updateFriendLastMessage(message.fromUserId, message.content)
-      }
-    },
-    updateFriendLastMessage(friendId, lastMessage) {
-      const friend = this.friends.find(f => f.id === friendId)
-      if (friend) {
-        friend.lastMessage = lastMessage
-        friend.lastMessageTime = this.formatTime(Date.now())
-      }
-    },
-    getAvatarFor(uid) {
-      const f = this.friends.find(x => String(x.id) === String(uid))
-      if (f && f.avatarUrl) return f.avatarUrl
-      const account = localStorage.getItem('account') ? JSON.parse(localStorage.getItem('account')) : null
-      if (String(uid) === String(this.currentUid)) {
-        return account?.avatarUrl || '/default-avatar.png'
-      }
-      return '/default-avatar.png'
-    },
-    async reportRead() {
-      if (!this.selectedFriendId) return
-      try { await request.post('/chat/ack/read', { from_user_id: String(this.selectedFriendId) }) } catch (e) {}
-    },
-    scrollToBottom() {
-      this.$nextTick(() => {
-        const chatHistoryEl = this.$refs.chatHistory
-        if (chatHistoryEl) {
-          chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight
-          this.isAtBottom = true
-        }
-      })
-    },
-    shouldShowDateSeparator(index) {
-      return index === 0
-    },
-    getDateKey(timestamp) {
-      const t = this.normalizeTs(timestamp)
-      if (!Number.isFinite(t)) return ''
-      return new Date(t).toDateString()
-    },
-    getDateSeparatorText(timestamp) {
-      const t = this.normalizeTs(timestamp)
-      if (!Number.isFinite(t)) return ''
-      return new Date(t).toLocaleDateString()
-    },
-    formatTime(timestamp) {
-      const t = this.normalizeTs(timestamp)
-      if (!Number.isFinite(t)) return ''
-      const date = new Date(t)
-      return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-    },
-    handleTransitionEnd(msg) {
-      if (msg.isNew) msg.isNew = false
-    },
-    getUserId() {
-      const userStr = localStorage.getItem('account')
-      if (!userStr) return ''
-      try {
-        const user = JSON.parse(userStr)
-        return user?.id != null ? String(user.id) : ''
-      } catch (_) {
-        return ''
-      }
-    },
-    normalizeTs(ts) {
-      if (typeof ts === 'number') return ts
-      if (typeof ts === 'string') {
-        const m = ts.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(?:Z)?$/)
-        if (m) {
-          const [_, y, mo, d, h, mi, s, ms] = m
-          const msInt = ms ? parseInt(ms.padEnd(3, '0'), 10) : 0
-          return new Date(parseInt(y,10), parseInt(mo,10)-1, parseInt(d,10), parseInt(h,10), parseInt(mi,10), parseInt(s,10), msInt).getTime()
-        }
-        const n = Date.parse(ts)
-        return Number.isNaN(n) ? NaN : n
-      }
-      try {
-        const n = new Date(ts).getTime()
-        return Number.isNaN(n) ? NaN : n
-      } catch (_) {
-        return NaN
-      }
-    },
-    generateMsgId() {
-      return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    } catch (e) {
+      console.error('Failed to get user info:', e)
     }
   }
+  await loadFriendsList()
+})
+
+onBeforeUnmount(() => {
+  isPolling.value = false
+  if (pollController.value) pollController.value.abort()
+})
+
+// 方法
+const loadFriendsList = async () => {
+  try {
+    console.log('Loading friends list...')
+    const res = await request.get('/follow/friend/list')
+    const arr = res.data?.friends || []
+    friends.value = arr.map(x => ({
+      id: String(x.user_id),
+      nickname: x.nickname || '未知用户',
+      avatarUrl: x.avatar_url,
+      lastMessage: '',
+      lastMessageTime: ''
+    }))
+    console.log('Friends loaded:', friends.value)
+  } catch (e) {
+    console.error('Failed to load friends list:', e)
+  }
+}
+
+const selectFriend = async (friend) => {
+  console.log('Selecting friend:', friend)
+  selectedFriendId.value = friend.id
+  selectedFriend.value = friend
+  await loadChatHistory()
+  pollSince.value = null
+  startPolling()
+  reportRead()
+}
+
+const loadChatHistory = async () => {
+  if (!selectedFriendId.value) {
+    console.log('No friend selected')
+    return
+  }
+
+  try {
+    console.log('Loading chat history for friend:', selectedFriendId.value)
+    const res = await request.get('/chat/history', {
+      params: {
+        uid1: String(currentUid.value),
+        uid2: String(selectedFriendId.value)
+      }
+    })
+    console.log('Chat history response:', res)
+
+    const arr = res.data?.messages || []
+    console.log('Raw messages:', arr)
+
+    const msgs = arr.map(x => ({
+      id: x.id || generateMsgId(),
+      content: x.content || '',
+      fromUid: String(x.fromUid),
+      toUid: String(x.toUid),
+      sendTime: normalizeTs(x.sendTime),
+      isNew: false
+    }))
+
+    console.log('Processed messages:', msgs)
+    chatHistory.value = msgs
+    friendChatHistories.value[selectedFriendId.value] = [...msgs]
+
+    nextTick(() => {
+      scrollToBottom()
+    })
+  } catch (e) {
+    console.error('Failed to load chat history:', e)
+  }
+}
+
+const startPolling = () => {
+  if (isPolling.value) return
+  isPolling.value = true
+  pollController.value = new AbortController()
+
+  const loop = async () => {
+    if (!isPolling.value) return
+    try {
+      const res = await request.get('/chat/poll', {
+        params: {
+          since: pollSince.value,
+          timeoutSeconds: 30
+        },
+        timeout: 35000,
+        signal: pollController.value.signal
+      })
+      const data = res.data || res
+      const list = data.messages || []
+      if (list.length > 0) {
+        list.forEach(m => handleChatMessage({
+          fromUserId: m.fromUid,
+          toUserId: m.toUid,
+          content: m.content,
+          timestamp: normalizeTs(m.sendTime)
+        }))
+        pollSince.value = data.next_since || list[list.length - 1].id
+      }
+      suggestedInterval.value = (data.suggested_poll_interval || 30) * 1000
+      pollBackoffMs.value = 1000
+      setTimeout(loop, 0)
+    } catch (e) {
+      if (e?.code === 'ERR_CANCELED') return
+      console.error('Polling error:', e)
+      pollBackoffMs.value = Math.min(pollBackoffMs.value * 2, pollMaxBackoffMs.value)
+      setTimeout(loop, pollBackoffMs.value)
+    }
+  }
+  loop()
+}
+
+const sendMessage = async () => {
+  const content = message.value.trim()
+  if (!content || !selectedFriendId.value) return
+  try {
+    const clientMsgId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    const res = await request.post('/chat/send', {
+      to_user_id: String(selectedFriendId.value),
+      content,
+      client_msg_id: clientMsgId
+    }, { timeout: 10000 })
+
+    console.log('Send message response:', res)
+
+    const serverTs = normalizeTs(res.data?.created_at ?? res.data?.sendTime ?? Date.now())
+    const sentMessage = {
+      id: res.data?.id || generateMsgId(),
+      content,
+      fromUid: currentUid.value,
+      toUid: selectedFriendId.value,
+      sendTime: serverTs,
+      isNew: false
+    }
+
+    chatHistory.value.push(sentMessage)
+    if (!friendChatHistories.value[selectedFriendId.value]) {
+      friendChatHistories.value[selectedFriendId.value] = []
+    }
+    friendChatHistories.value[selectedFriendId.value].push(sentMessage)
+
+    scrollToBottom()
+    message.value = ''
+    updateFriendLastMessage(selectedFriendId.value, content)
+  } catch (e) {
+    console.error('Failed to send message:', e)
+  }
+}
+
+const handleChatMessage = (message) => {
+  const chatMessage = {
+    id: generateMsgId(),
+    content: message.content || '',
+    fromUid: String(message.fromUserId),
+    toUid: String(message.toUserId),
+    sendTime: message.timestamp || Date.now(),
+    isNew: true
+  }
+
+  console.log('Handling chat message:', chatMessage)
+
+  if (selectedFriendId.value === String(message.fromUserId)) {
+    chatHistory.value.push(chatMessage)
+    if (!friendChatHistories.value[selectedFriendId.value]) {
+      friendChatHistories.value[selectedFriendId.value] = []
+    }
+    friendChatHistories.value[selectedFriendId.value].push(chatMessage)
+    scrollToBottom()
+  } else {
+    updateFriendLastMessage(String(message.fromUserId), message.content)
+  }
+}
+
+const updateFriendLastMessage = (friendId, lastMessage) => {
+  const friend = friends.value.find(f => f.id === friendId)
+  if (friend) {
+    friend.lastMessage = lastMessage
+    friend.lastMessageTime = formatTime(Date.now())
+  }
+}
+
+const getAvatarFor = (uid) => {
+  const f = friends.value.find(x => String(x.id) === String(uid))
+  if (f && f.avatarUrl) return f.avatarUrl
+  const account = localStorage.getItem('account') ? JSON.parse(localStorage.getItem('account')) : null
+  if (String(uid) === String(currentUid.value)) {
+    return account?.avatarUrl || '/default-avatar.png'
+  }
+  return '/default-avatar.png'
+}
+
+const reportRead = async () => {
+  if (!selectedFriendId.value) return
+  try {
+    await request.post('/chat/ack/read', {
+      from_user_id: String(selectedFriendId.value)
+    })
+  } catch (e) {
+    console.error('Failed to report read:', e)
+  }
+}
+
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (chatHistoryEl.value) {
+      chatHistoryEl.value.scrollTop = chatHistoryEl.value.scrollHeight
+      isAtBottom.value = true
+    }
+  })
+}
+
+const shouldShowDateSeparator = (index) => {
+  return index === 0
+}
+
+const getDateKey = (timestamp) => {
+  const t = normalizeTs(timestamp)
+  if (!Number.isFinite(t)) return ''
+  return new Date(t).toDateString()
+}
+
+const getDateSeparatorText = (timestamp) => {
+  const t = normalizeTs(timestamp)
+  if (!Number.isFinite(t)) return ''
+  return new Date(t).toLocaleDateString()
+}
+
+const formatTime = (timestamp) => {
+  const t = normalizeTs(timestamp)
+  if (!Number.isFinite(t)) return ''
+  const date = new Date(t)
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+}
+
+const handleTransitionEnd = (msg) => {
+  if (msg.isNew) msg.isNew = false
+}
+
+const getUserId = () => {
+  const userStr = localStorage.getItem('account')
+  if (!userStr) return ''
+  try {
+    const user = JSON.parse(userStr)
+    return user?.id != null ? String(user.id) : ''
+  } catch (_) {
+    return ''
+  }
+}
+
+const normalizeTs = (ts) => {
+  if (typeof ts === 'number') return ts
+  if (typeof ts === 'string') {
+    // 处理 ISO 格式时间字符串
+    const m = ts.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(?:Z)?$/)
+    if (m) {
+      const [_, y, mo, d, h, mi, s, ms] = m
+      const msInt = ms ? parseInt(ms.padEnd(3, '0'), 10) : 0
+      return new Date(parseInt(y,10), parseInt(mo,10)-1, parseInt(d,10), parseInt(h,10), parseInt(mi,10), parseInt(s,10), msInt).getTime()
+    }
+    const n = Date.parse(ts)
+    return Number.isNaN(n) ? NaN : n
+  }
+  try {
+    const n = new Date(ts).getTime()
+    return Number.isNaN(n) ? NaN : n
+  } catch (_) {
+    return NaN
+  }
+}
+
+const generateMsgId = () => {
+  return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 }
 </script>
 <style scoped>
@@ -580,27 +690,5 @@ export default {
   justify-content: center;
   color: #999;
   background-color: #fafafa;
-}
-
-@media (max-width: 768px) {
-  .chat-container {
-    flex-direction: column;
-    height: calc(100svh - var(--app-header-height, 56px));
-  }
-
-  .friends-list {
-    width: 100%;
-    height: 30%;
-    border-right: none;
-    border-bottom: 1px solid #e0e0e0;
-  }
-
-  .chat-main {
-    height: 70%;
-  }
-
-  .message-row {
-    max-width: 85%;
-  }
 }
 </style>
