@@ -545,11 +545,11 @@ const toUser = (userId) =>{
               <div class="comment-list">
                 <div v-for="item in comments" :key="item.id" class="comment-thread">
                   <div class="comment-item">
-                    <div class="comment-avatar">
+                    <div class="comment-avatar" @click="toUser(item.userId)" style="cursor: pointer;">
                       <el-image :src="item.avatarUrl"></el-image>
                     </div>
                     <div class="comment-content">
-                      <div class="comment-user">{{ item.nickname }}</div>
+                      <div class="comment-user" @click="toUser(item.userId)" style="cursor: pointer;">{{ item.nickname }}</div>
                       <div class="comment-text">{{ item.content }}</div>
                       <div class="comment-meta">
                         <span class="comment-time">{{ item.time }}</span>
@@ -577,13 +577,13 @@ const toUser = (userId) =>{
                   <!-- 子评论 -->
                   <template v-if="item.children?.length">
                     <div v-for="subItem in item.children" class="comment-item comment-sub-item" :key="subItem.id">
-                      <div class="comment-avatar">
+                      <div class="comment-avatar" @click="toUser(subItem.userId)" style="cursor: pointer;">
                         <el-image :src="subItem.avatarUrl"/>
                       </div>
                       <div class="comment-content">
                         <div class="comment-user">
-                          {{ subItem.nickname }}
-                          <span v-if="subItem.pid" class="reply-target">回复 @{{ subItem.pnickname }}</span>
+                          <span @click="toUser(subItem.userId)" style="cursor: pointer;">{{ subItem.nickname }}</span>
+                          <span v-if="subItem.pid" class="reply-target">回复 @<span @click="toUser(subItem.pUserId)" style="cursor: pointer;">{{ subItem.pnickname }}</span></span>
                         </div>
                         <div class="comment-text">{{ subItem.content }}</div>
                         <div class="comment-meta">

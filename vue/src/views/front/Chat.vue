@@ -29,9 +29,9 @@
       <!-- 聊天头部 -->
       <div class="chat-header">
         <div class="current-friend-info">
-          <img :src="selectedFriend.avatarUrl || '/default-avatar.png'" class="header-avatar">
+          <img :src="selectedFriend.avatarUrl || '/default-avatar.png'" class="header-avatar" @click="toUser(selectedFriend.id)" style="cursor: pointer;">
           <div class="chat-title">
-            <div class="current-friend-name">{{ selectedFriend.nickname }}</div>
+            <div class="current-friend-name" @click="toUser(selectedFriend.id)" style="cursor: pointer;">{{ selectedFriend.nickname }}</div>
             <div class="current-friend-status">
               <span :class="['status-dot', isPolling ? 'online' : 'offline']"></span>
               {{ isPolling ? '在线' : '离线' }}
@@ -77,7 +77,15 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import request from '@/utils/request'
+
+const router = useRouter()
+
+// 跳转到用户主页
+const toUser = (userId) => {
+  router.push('/front/user?id=' + userId)
+}
 
 // 关键状态（精简保留）
 const isPolling = ref(false)
