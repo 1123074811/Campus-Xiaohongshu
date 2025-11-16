@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { projectName } from '../../config/config.default'
 import { User, Lock, SwitchButton, House, VideoCamera, Bell,PictureRounded, ChatDotRound} from '@element-plus/icons-vue'
@@ -52,7 +52,31 @@ const sidebarMenus = ref([
 ])
 
 // 当前激活的侧边栏菜单
-const activeSidebarMenu = ref('/front/home')
+const activeSidebarMenu = ref('')
+
+// 初始化侧边栏菜单激活状态
+const initActiveSidebarMenu = () => {
+  // 检查当前路由路径是否匹配任何侧边栏菜单项
+  const matchedMenu = sidebarMenus.value.find(menu => {
+    // 对于包含查询参数的路由（如个人页面），只匹配路径部分
+    if (menu.path.includes('?')) {
+      const menuPath = menu.path.split('?')[0]
+      return route.path.startsWith(menuPath)
+    }
+    return menu.path === route.path
+  })
+  
+  // 如果找到匹配的菜单项，设置为激活状态，否则默认为首页
+  activeSidebarMenu.value = matchedMenu ? matchedMenu.path : '/front/home'
+}
+
+// 组件挂载时初始化激活状态
+initActiveSidebarMenu()
+
+// 监听路由变化，更新侧边栏激活状态
+watch(() => route.path, () => {
+  initActiveSidebarMenu()
+})
 
 // 切换侧边栏菜单
 const switchSidebarMenu = (menu) => {
