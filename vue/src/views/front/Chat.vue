@@ -76,77 +76,64 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import request from '@/utils/request'
 
-// 响应式数据
+// 关键状态（精简保留）
 const isPolling = ref(false)
 const pollSince = ref(null)
 const pollBackoffMs = ref(1000)
-const pollMaxBackoffMs = ref(15000)
-const suggestedInterval = ref(30000)
 const pollController = ref(null)
 const currentUid = ref('')
 const friends = ref([])
 const selectedFriendId = ref('')
 const selectedFriend = ref(null)
 const chatHistory = ref([])
-const friendChatHistories = ref({})
 const message = ref('')
 const isAtBottom = ref(true)
-const chatHistoryEl = ref(null) // 修复：统一模板引用名称
+const chatHistoryEl = ref(null)
 
-// 生命周期
+// 初始化：获取当前用户并加载好友与其最后消息
 onMounted(async () => {
-  console.log('Chat component mounted')
   currentUid.value = getUserId()
   if (!currentUid.value) {
     try {
       const res = await request.get('/web/userInfo')
       const u = res.data
       if (u && u.id != null) {
-        const acc = {
-          id: u.id,
-          nickname: u.nickname,
-          avatarUrl: u.avatarUrl
-        }
+        const acc = { id: u.id, nickname: u.nickname, avatarUrl: u.avatarUrl }
         localStorage.setItem('account', JSON.stringify(acc))
         currentUid.value = String(u.id)
-        console.log('Current user ID:', currentUid.value)
       }
-    } catch (e) {
-      console.error('Failed to get user info:', e)
-    }
+    } catch {}
   }
   await loadFriendsList()
 })
 
+// 卸载：停止轮询
 onBeforeUnmount(() => {
   isPolling.value = false
   if (pollController.value) pollController.value.abort()
 })
 
-// 方法
+// 加载好友列表并填充最后消息
 const loadFriendsList = async () => {
   try {
-    console.log('Loading friends list...')
     const res = await request.get('/follow/friend/list')
     const arr = res.data?.friends || []
-    friends.value = arr.map(x => ({
-      id: String(x.user_id),
-      nickname: x.nickname || '未知用户',
-      avatarUrl: x.avatar_url,
-      lastMessage: '',
-      lastMessageTime: ''
+    friends.value = arr.map(x => ({ id: String(x.user_id), nickname: x.nickname || '未知用户', avatarUrl: x.avatar_url, lastMessage: '', lastMessageTime: '' }))
+    await Promise.all(friends.value.map(async (f) => {
+      try {
+        const r = await request.get('/chat/last', { params: { uid: String(f.id) } })
+        const m = r.data?.message
+        if (m) { f.lastMessage = m.content || ''; f.lastMessageTime = formatTime(m.sendTime) }
+      } catch {}
     }))
-    console.log('Friends loaded:', friends.value)
-  } catch (e) {
-    console.error('Failed to load friends list:', e)
-  }
+  } catch {}
 }
 
+// 选择好友：加载历史、开始轮询并上报已读
 const selectFriend = async (friend) => {
-  console.log('Selecting friend:', friend)
   selectedFriendId.value = friend.id
   selectedFriend.value = friend
   await loadChatHistory()
@@ -155,251 +142,100 @@ const selectFriend = async (friend) => {
   reportRead()
 }
 
+// 加载与选中好友的历史消息
 const loadChatHistory = async () => {
-  if (!selectedFriendId.value) {
-    console.log('No friend selected')
-    return
-  }
-
+  if (!selectedFriendId.value) return
   try {
-    console.log('Loading chat history for friend:', selectedFriendId.value)
-    const res = await request.get('/chat/history', {
-      params: {
-        uid1: String(currentUid.value),
-        uid2: String(selectedFriendId.value)
-      }
-    })
-    console.log('Chat history response:', res)
-
+    const res = await request.get('/chat/history', { params: { uid1: String(currentUid.value), uid2: String(selectedFriendId.value) } })
     const arr = res.data?.messages || []
-    console.log('Raw messages:', arr)
-
-    const msgs = arr.map(x => ({
-      id: x.id || generateMsgId(),
-      content: x.content || '',
-      fromUid: String(x.fromUid),
-      toUid: String(x.toUid),
-      sendTime: normalizeTs(x.sendTime),
-      isNew: false
-    }))
-
-    console.log('Processed messages:', msgs)
-    chatHistory.value = msgs
-    friendChatHistories.value[selectedFriendId.value] = [...msgs]
-
-    nextTick(() => {
-      scrollToBottom()
-    })
-  } catch (e) {
-    console.error('Failed to load chat history:', e)
-  }
+    chatHistory.value = arr.map(x => ({ id: x.id || generateMsgId(), content: x.content || '', fromUid: String(x.fromUid), toUid: String(x.toUid), sendTime: normalizeTs(x.sendTime), isNew: false }))
+    nextTick(() => { scrollToBottom() })
+  } catch {}
 }
 
+// 长轮询：拉取新消息（带取消控制与指数退避）
 const startPolling = () => {
   if (isPolling.value) return
   isPolling.value = true
   pollController.value = new AbortController()
-
   const loop = async () => {
     if (!isPolling.value) return
     try {
-      const res = await request.get('/chat/poll', {
-        params: {
-          since: pollSince.value,
-          timeoutSeconds: 30
-        },
-        timeout: 35000,
-        signal: pollController.value.signal
-      })
+      const res = await request.get('/chat/poll', { params: { since: pollSince.value, timeoutSeconds: 30 }, timeout: 35000, signal: pollController.value.signal })
       const data = res.data || res
       const list = data.messages || []
       if (list.length > 0) {
-        list.forEach(m => handleChatMessage({
-          fromUserId: m.fromUid,
-          toUserId: m.toUid,
-          content: m.content,
-          timestamp: normalizeTs(m.sendTime)
-        }))
+        list.forEach(m => handleChatMessage({ fromUserId: m.fromUid, toUserId: m.toUid, content: m.content, timestamp: normalizeTs(m.sendTime) }))
         pollSince.value = data.next_since || list[list.length - 1].id
       }
-      suggestedInterval.value = (data.suggested_poll_interval || 30) * 1000
       pollBackoffMs.value = 1000
       setTimeout(loop, 0)
     } catch (e) {
-      if (e?.code === 'ERR_CANCELED') return
-      console.error('Polling error:', e)
-      pollBackoffMs.value = Math.min(pollBackoffMs.value * 2, pollMaxBackoffMs.value)
+      const msg = String(e?.message || '')
+      if (e?.code === 'ERR_CANCELED' || msg.toLowerCase().includes('aborted')) return
+      pollBackoffMs.value = Math.min(pollBackoffMs.value * 2, 15000)
       setTimeout(loop, pollBackoffMs.value)
     }
   }
   loop()
 }
 
+// 发送消息：使用服务端时间并更新好友摘要
 const sendMessage = async () => {
   const content = message.value.trim()
   if (!content || !selectedFriendId.value) return
   try {
     const clientMsgId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    const res = await request.post('/chat/send', {
-      to_user_id: String(selectedFriendId.value),
-      content,
-      client_msg_id: clientMsgId
-    }, { timeout: 10000 })
-
-    console.log('Send message response:', res)
-
+    const res = await request.post('/chat/send', { to_user_id: String(selectedFriendId.value), content, client_msg_id: clientMsgId }, { timeout: 10000 })
     const serverTs = normalizeTs(res.data?.created_at ?? res.data?.sendTime ?? Date.now())
-    const sentMessage = {
-      id: res.data?.id || generateMsgId(),
-      content,
-      fromUid: currentUid.value,
-      toUid: selectedFriendId.value,
-      sendTime: serverTs,
-      isNew: false
-    }
-
+    const sentMessage = { id: res.data?.id || generateMsgId(), content, fromUid: currentUid.value, toUid: selectedFriendId.value, sendTime: serverTs, isNew: false }
     chatHistory.value.push(sentMessage)
-    if (!friendChatHistories.value[selectedFriendId.value]) {
-      friendChatHistories.value[selectedFriendId.value] = []
-    }
-    friendChatHistories.value[selectedFriendId.value].push(sentMessage)
-
     scrollToBottom()
     message.value = ''
-    updateFriendLastMessage(selectedFriendId.value, content)
-  } catch (e) {
-    console.error('Failed to send message:', e)
-  }
+    updateFriendLastMessage(selectedFriendId.value, content, serverTs)
+  } catch {}
 }
 
+// 处理新消息：落入当前会话或更新好友摘要
 const handleChatMessage = (message) => {
-  const chatMessage = {
-    id: generateMsgId(),
-    content: message.content || '',
-    fromUid: String(message.fromUserId),
-    toUid: String(message.toUserId),
-    sendTime: message.timestamp || Date.now(),
-    isNew: true
-  }
-
-  console.log('Handling chat message:', chatMessage)
-
-  if (selectedFriendId.value === String(message.fromUserId)) {
-    chatHistory.value.push(chatMessage)
-    if (!friendChatHistories.value[selectedFriendId.value]) {
-      friendChatHistories.value[selectedFriendId.value] = []
-    }
-    friendChatHistories.value[selectedFriendId.value].push(chatMessage)
-    scrollToBottom()
-  } else {
-    updateFriendLastMessage(String(message.fromUserId), message.content)
-  }
+  const chatMessage = { id: generateMsgId(), content: message.content || '', fromUid: String(message.fromUserId), toUid: String(message.toUserId), sendTime: message.timestamp || Date.now(), isNew: true }
+  if (selectedFriendId.value === String(message.fromUserId)) { chatHistory.value.push(chatMessage); scrollToBottom() }
+  else { updateFriendLastMessage(String(message.fromUserId), message.content, message.timestamp) }
 }
 
-const updateFriendLastMessage = (friendId, lastMessage) => {
+// 更新好友列表中的最后消息与时间
+const updateFriendLastMessage = (friendId, lastMessage, ts) => {
   const friend = friends.value.find(f => f.id === friendId)
-  if (friend) {
-    friend.lastMessage = lastMessage
-    friend.lastMessageTime = formatTime(Date.now())
-  }
+  if (friend) { friend.lastMessage = lastMessage; friend.lastMessageTime = formatTime(ts ?? Date.now()) }
 }
 
+// 头像选择
 const getAvatarFor = (uid) => {
   const f = friends.value.find(x => String(x.id) === String(uid))
   if (f && f.avatarUrl) return f.avatarUrl
   const account = localStorage.getItem('account') ? JSON.parse(localStorage.getItem('account')) : null
-  if (String(uid) === String(currentUid.value)) {
-    return account?.avatarUrl || '/default-avatar.png'
-  }
-  return '/default-avatar.png'
+  return String(uid) === String(currentUid.value) ? (account?.avatarUrl || '/default-avatar.png') : '/default-avatar.png'
 }
 
+// 上报已读
 const reportRead = async () => {
   if (!selectedFriendId.value) return
-  try {
-    await request.post('/chat/ack/read', {
-      from_user_id: String(selectedFriendId.value)
-    })
-  } catch (e) {
-    console.error('Failed to report read:', e)
-  }
+  try { await request.post('/chat/ack/read', { from_user_id: String(selectedFriendId.value) }) } catch {}
 }
 
-const scrollToBottom = () => {
-  nextTick(() => {
-    if (chatHistoryEl.value) {
-      chatHistoryEl.value.scrollTop = chatHistoryEl.value.scrollHeight
-      isAtBottom.value = true
-    }
-  })
-}
+// 滚动到底部
+const scrollToBottom = () => { nextTick(() => { if (chatHistoryEl.value) { chatHistoryEl.value.scrollTop = chatHistoryEl.value.scrollHeight; isAtBottom.value = true } }) }
 
-const shouldShowDateSeparator = (index) => {
-  if (index === 0) return true
-  const prev = chatHistory.value[index - 1]
-  const curr = chatHistory.value[index]
-  if (!prev || !curr) return false
-  return getDateKey(prev.sendTime) !== getDateKey(curr.sendTime)
-}
+// 日期分隔逻辑与格式化
+const shouldShowDateSeparator = (index) => { if (index === 0) return true; const prev = chatHistory.value[index - 1]; const curr = chatHistory.value[index]; if (!prev || !curr) return false; return getDateKey(prev.sendTime) !== getDateKey(curr.sendTime) }
+const getDateKey = (timestamp) => { const t = normalizeTs(timestamp); if (!Number.isFinite(t)) return ''; return new Date(t).toDateString() }
+const getDateSeparatorText = (timestamp) => { const t = normalizeTs(timestamp); if (!Number.isFinite(t)) return ''; return new Date(t).toLocaleDateString() }
+const formatTime = (timestamp) => { const t = normalizeTs(timestamp); if (!Number.isFinite(t)) return ''; const date = new Date(t); return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) }
 
-const getDateKey = (timestamp) => {
-  const t = normalizeTs(timestamp)
-  if (!Number.isFinite(t)) return ''
-  return new Date(t).toDateString()
-}
-
-const getDateSeparatorText = (timestamp) => {
-  const t = normalizeTs(timestamp)
-  if (!Number.isFinite(t)) return ''
-  return new Date(t).toLocaleDateString()
-}
-
-const formatTime = (timestamp) => {
-  const t = normalizeTs(timestamp)
-  if (!Number.isFinite(t)) return ''
-  const date = new Date(t)
-  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-}
-
-const handleTransitionEnd = (msg) => {
-  if (msg.isNew) msg.isNew = false
-}
-
-const getUserId = () => {
-  const userStr = localStorage.getItem('account')
-  if (!userStr) return ''
-  try {
-    const user = JSON.parse(userStr)
-    return user?.id != null ? String(user.id) : ''
-  } catch (_) {
-    return ''
-  }
-}
-
-const normalizeTs = (ts) => {
-  if (typeof ts === 'number') return ts
-  if (typeof ts === 'string') {
-    // 处理 ISO 格式时间字符串
-    const m = ts.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(?:Z)?$/)
-    if (m) {
-      const [_, y, mo, d, h, mi, s, ms] = m
-      const msInt = ms ? parseInt(ms.padEnd(3, '0'), 10) : 0
-      return new Date(parseInt(y,10), parseInt(mo,10)-1, parseInt(d,10), parseInt(h,10), parseInt(mi,10), parseInt(s,10), msInt).getTime()
-    }
-    const n = Date.parse(ts)
-    return Number.isNaN(n) ? NaN : n
-  }
-  try {
-    const n = new Date(ts).getTime()
-    return Number.isNaN(n) ? NaN : n
-  } catch (_) {
-    return NaN
-  }
-}
-
-const generateMsgId = () => {
-  return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-}
+// 工具方法：读取用户ID、解析时间与生成消息ID
+const getUserId = () => { const s = localStorage.getItem('account'); if (!s) return ''; try { const u = JSON.parse(s); return u?.id != null ? String(u.id) : '' } catch { return '' } }
+const normalizeTs = (ts) => { if (typeof ts === 'number') return ts; if (typeof ts === 'string') { const m = ts.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(?:Z)?$/); if (m) { const [_, y, mo, d, h, mi, s, ms] = m; const msInt = ms ? parseInt(ms.padEnd(3, '0'), 10) : 0; return new Date(parseInt(y,10), parseInt(mo,10)-1, parseInt(d,10), parseInt(h,10), parseInt(mi,10), parseInt(s,10), msInt).getTime() } const n = Date.parse(ts); return Number.isNaN(n) ? NaN : n } try { const n = new Date(ts).getTime(); return Number.isNaN(n) ? NaN : n } catch { return NaN } }
+const generateMsgId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 </script>
 <style scoped>
 .chat-container {

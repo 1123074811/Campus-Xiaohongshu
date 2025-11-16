@@ -22,7 +22,9 @@ public class ChatController {
     @Resource
     private ChatMessageMapper chatMessageMapper;
 
+    // 每个用户一个内存队列：用于长轮询期间及时推送新消息
     private static final ConcurrentHashMap<Integer, LinkedBlockingQueue<ChatMessage>> userQueues = new ConcurrentHashMap<>();
+    // 最近心跳时间：用于简单在线状态判断
     private static final ConcurrentHashMap<Integer, Long> userLastActive = new ConcurrentHashMap<>();
 
     private static LinkedBlockingQueue<ChatMessage> getQueue(Integer userId) {
@@ -33,6 +35,11 @@ public class ChatController {
         return userLastActive.get(userId);
     }
 
+    /**
+     * 发送私聊消息
+     * - 写入数据库
+     * - 立即放入接收者队列（若在线，长轮询可立刻返回）
+     */
     @PostMapping("/chat/send")
     public Result sendMessage(@RequestBody Map<String, Object> body) {
         Account account = TokenUtils.getCurrentUser();
@@ -60,9 +67,8 @@ public class ChatController {
 
         chatMessageMapper.insert(msg);
 
-        try {
-            getQueue(Integer.valueOf(toUserId)).offer(msg);
-        } catch (Exception ignored) {}
+        // 推入接收者队列（不阻塞，失败忽略）
+        try { getQueue(Integer.valueOf(toUserId)).offer(msg); } catch (Exception ignored) {}
 
         Map<String, Object> resp = new HashMap<>();
         resp.put("id", msg.getId());
@@ -72,6 +78,12 @@ public class ChatController {
         return Result.success(resp);
     }
 
+    /**
+     * 长轮询拉取新消息
+     * 策略：
+     * 1) 先从DB按id游标拉取大于since的消息
+     * 2) 若无，则阻塞等待队列消息（最多timeoutSeconds秒）
+     */
     @GetMapping("/chat/poll")
     public Result poll(@RequestParam(required = false) Long since,
                        @RequestParam(required = false, defaultValue = "30") Integer timeoutSeconds) throws InterruptedException {
@@ -105,21 +117,11 @@ public class ChatController {
         Map<String, Object> resp = new HashMap<>();
         resp.put("messages", messages);
         resp.put("next_since", messages.isEmpty() ? since : messages.get(messages.size() - 1).getId());
-        resp.put("server_time", System.currentTimeMillis());
-        resp.put("suggested_poll_interval", suggestInterval(messages));
         return Result.success(resp);
     }
-
-    private int suggestInterval(List<ChatMessage> messages) {
-        if (messages == null || messages.isEmpty()) {
-            return 45;
-        }
-        int count = messages.size();
-        if (count >= 20) return 5;
-        if (count >= 5) return 10;
-        return 30;
-    }
-
+    /**
+     * 已读回执：将指定会话消息标记为已读
+     */
     @PostMapping("/chat/ack/read")
     public Result ackRead(@RequestBody Map<String, Object> body) {
         Account account = TokenUtils.getCurrentUser();
@@ -136,13 +138,9 @@ public class ChatController {
         return Result.success(resp);
     }
 
-    @PostMapping("/chat/ack/delivered")
-    public Result ackDelivered(@RequestBody Map<String, Object> body) {
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("updated", 0);
-        return Result.success(resp);
-    }
-
+    /**
+     * 双向历史消息
+     */
     @GetMapping("/chat/history")
     public Result getChatHistory(@RequestParam String uid1,
                                  @RequestParam String uid2) {
@@ -157,5 +155,25 @@ public class ChatController {
         resp.put("messages", list);
         resp.put("next_cursor", list.isEmpty() ? null : list.get(list.size() - 1).getId());
         return Result.success(resp);
+    }
+    /**
+     * 获取与指定好友的最后一条消息
+     */
+    @GetMapping("/chat/last")
+    public Result getLast(@RequestParam String uid) {
+        Account account = TokenUtils.getCurrentUser();
+        if (account == null || account.getId() == null) {
+            return Result.error("401", "未登录");
+        }
+        String me = String.valueOf(account.getId());
+        List<ChatMessage> list = chatMessageMapper.selectList(
+                new LambdaQueryWrapper<ChatMessage>()
+                        .and(w -> w.eq(ChatMessage::getFromUid, me).eq(ChatMessage::getToUid, uid)
+                                .or().eq(ChatMessage::getFromUid, uid).eq(ChatMessage::getToUid, me))
+                        .orderByDesc(ChatMessage::getId)
+                        .last("limit 1")
+        );
+        ChatMessage msg = list.isEmpty() ? null : list.get(0);
+        return Result.success(Map.of("message", msg));
     }
 }
