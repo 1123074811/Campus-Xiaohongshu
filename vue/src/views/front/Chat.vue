@@ -335,7 +335,11 @@ const scrollToBottom = () => {
 }
 
 const shouldShowDateSeparator = (index) => {
-  return index === 0
+  if (index === 0) return true
+  const prev = chatHistory.value[index - 1]
+  const curr = chatHistory.value[index]
+  if (!prev || !curr) return false
+  return getDateKey(prev.sendTime) !== getDateKey(curr.sendTime)
 }
 
 const getDateKey = (timestamp) => {
