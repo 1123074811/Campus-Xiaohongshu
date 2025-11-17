@@ -29,9 +29,12 @@
       <!-- 聊天头部 -->
       <div class="chat-header">
         <div class="current-friend-info">
-          <img :src="selectedFriend.avatarUrl || '/default-avatar.png'" class="header-avatar" @click="toUser(selectedFriend.id)" style="cursor: pointer;">
+          <img :src="selectedFriend.avatarUrl || '/default-avatar.png'" class="header-avatar"
+               @click="toUser(selectedFriend.id)" style="cursor: pointer;">
           <div class="chat-title">
-            <div class="current-friend-name" @click="toUser(selectedFriend.id)" style="cursor: pointer;">{{ selectedFriend.nickname }}</div>
+            <div class="current-friend-name" @click="toUser(selectedFriend.id)" style="cursor: pointer;">
+              {{ selectedFriend.nickname }}
+            </div>
             <div class="current-friend-status">
               <span :class="['status-dot', isPolling ? 'online' : 'offline']"></span>
               {{ isPolling ? '在线' : '离线' }}
@@ -48,7 +51,8 @@
             <div v-if="shouldShowDateSeparator(index)" class="date-separator" :key="`date-${getDateKey(msg.sendTime)}`">
               {{ getDateSeparatorText(msg.sendTime) }}
             </div>
-            <div class="message-row" :class="msg.fromUid === currentUid ? 'right' : 'left'" @transitionend="handleTransitionEnd(msg)">
+            <div class="message-row" :class="msg.fromUid === currentUid ? 'right' : 'left'"
+                 @transitionend="handleTransitionEnd(msg)">
               <img v-if="msg.fromUid !== currentUid" class="msg-avatar" :src="getAvatarFor(msg.fromUid)" alt="">
               <div class="bubble" :class="msg.fromUid === currentUid ? 'right' : 'left'">
                 <div class="msg-content">{{ msg.content }}</div>
@@ -76,8 +80,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import {ref, onMounted, onBeforeUnmount, nextTick} from 'vue'
+import {useRouter} from 'vue-router'
 import request from '@/utils/request'
 
 const router = useRouter()
@@ -109,11 +113,12 @@ onMounted(async () => {
       const res = await request.get('/web/userInfo')
       const u = res.data
       if (u && u.id != null) {
-        const acc = { id: u.id, nickname: u.nickname, avatarUrl: u.avatarUrl }
+        const acc = {id: u.id, nickname: u.nickname, avatarUrl: u.avatarUrl}
         localStorage.setItem('account', JSON.stringify(acc))
         currentUid.value = String(u.id)
       }
-    } catch {}
+    } catch {
+    }
   }
   await loadFriendsList()
 })
@@ -129,15 +134,26 @@ const loadFriendsList = async () => {
   try {
     const res = await request.get('/follow/friend/list')
     const arr = res.data?.friends || []
-    friends.value = arr.map(x => ({ id: String(x.user_id), nickname: x.nickname || '未知用户', avatarUrl: x.avatar_url, lastMessage: '', lastMessageTime: '' }))
+    friends.value = arr.map(x => ({
+      id: String(x.user_id),
+      nickname: x.nickname || '未知用户',
+      avatarUrl: x.avatar_url,
+      lastMessage: '',
+      lastMessageTime: ''
+    }))
     await Promise.all(friends.value.map(async (f) => {
       try {
-        const r = await request.get('/chat/last', { params: { uid: String(f.id) } })
+        const r = await request.get('/chat/last', {params: {uid: String(f.id)}})
         const m = r.data?.message
-        if (m) { f.lastMessage = m.content || ''; f.lastMessageTime = formatTime(m.sendTime) }
-      } catch {}
+        if (m) {
+          f.lastMessage = m.content || '';
+          f.lastMessageTime = formatTime(m.sendTime)
+        }
+      } catch {
+      }
     }))
-  } catch {}
+  } catch {
+  }
 }
 
 // 选择好友：加载历史、开始轮询并上报已读
@@ -154,11 +170,26 @@ const selectFriend = async (friend) => {
 const loadChatHistory = async () => {
   if (!selectedFriendId.value) return
   try {
-    const res = await request.get('/chat/history', { params: { uid1: String(currentUid.value), uid2: String(selectedFriendId.value) } })
+    const res = await request.get('/chat/history', {
+      params: {
+        uid1: String(currentUid.value),
+        uid2: String(selectedFriendId.value)
+      }
+    })
     const arr = res.data?.messages || []
-    chatHistory.value = arr.map(x => ({ id: x.id || generateMsgId(), content: x.content || '', fromUid: String(x.fromUid), toUid: String(x.toUid), sendTime: normalizeTs(x.sendTime), isNew: false }))
-    nextTick(() => { scrollToBottom() })
-  } catch {}
+    chatHistory.value = arr.map(x => ({
+      id: x.id || generateMsgId(),
+      content: x.content || '',
+      fromUid: String(x.fromUid),
+      toUid: String(x.toUid),
+      sendTime: normalizeTs(x.sendTime),
+      isNew: false
+    }))
+    nextTick(() => {
+      scrollToBottom()
+    })
+  } catch {
+  }
 }
 
 // 长轮询：拉取新消息（带取消控制与指数退避）
@@ -169,11 +200,20 @@ const startPolling = () => {
   const loop = async () => {
     if (!isPolling.value) return
     try {
-      const res = await request.get('/chat/poll', { params: { since: pollSince.value, timeoutSeconds: 30 }, timeout: 35000, signal: pollController.value.signal })
+      const res = await request.get('/chat/poll', {
+        params: {since: pollSince.value, timeoutSeconds: 30},
+        timeout: 35000,
+        signal: pollController.value.signal
+      })
       const data = res.data || res
       const list = data.messages || []
       if (list.length > 0) {
-        list.forEach(m => handleChatMessage({ fromUserId: m.fromUid, toUserId: m.toUid, content: m.content, timestamp: normalizeTs(m.sendTime) }))
+        list.forEach(m => handleChatMessage({
+          fromUserId: m.fromUid,
+          toUserId: m.toUid,
+          content: m.content,
+          timestamp: normalizeTs(m.sendTime)
+        }))
         pollSince.value = data.next_since || list[list.length - 1].id
       }
       pollBackoffMs.value = 1000
@@ -194,27 +234,53 @@ const sendMessage = async () => {
   if (!content || !selectedFriendId.value) return
   try {
     const clientMsgId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    const res = await request.post('/chat/send', { to_user_id: String(selectedFriendId.value), content, client_msg_id: clientMsgId }, { timeout: 10000 })
+    const res = await request.post('/chat/send', {
+      to_user_id: String(selectedFriendId.value),
+      content,
+      client_msg_id: clientMsgId
+    }, {timeout: 10000})
     const serverTs = normalizeTs(res.data?.created_at ?? res.data?.sendTime ?? Date.now())
-    const sentMessage = { id: res.data?.id || generateMsgId(), content, fromUid: currentUid.value, toUid: selectedFriendId.value, sendTime: serverTs, isNew: false }
+    const sentMessage = {
+      id: res.data?.id || generateMsgId(),
+      content,
+      fromUid: currentUid.value,
+      toUid: selectedFriendId.value,
+      sendTime: serverTs,
+      isNew: false
+    }
     chatHistory.value.push(sentMessage)
     scrollToBottom()
     message.value = ''
     updateFriendLastMessage(selectedFriendId.value, content, serverTs)
-  } catch {}
+  } catch {
+  }
 }
 
 // 处理新消息：落入当前会话或更新好友摘要
 const handleChatMessage = (message) => {
-  const chatMessage = { id: generateMsgId(), content: message.content || '', fromUid: String(message.fromUserId), toUid: String(message.toUserId), sendTime: message.timestamp || Date.now(), isNew: true }
-  if (selectedFriendId.value === String(message.fromUserId)) { chatHistory.value.push(chatMessage); scrollToBottom() }
-  else { updateFriendLastMessage(String(message.fromUserId), message.content, message.timestamp) }
+  const chatMessage = {
+    id: generateMsgId(),
+    content: message.content || '',
+    fromUid: String(message.fromUserId),
+    toUid: String(message.toUserId),
+    sendTime: message.timestamp || Date.now(),
+    isNew: true
+  }
+  if (selectedFriendId.value === String(message.fromUserId)) {
+    chatHistory.value.push(chatMessage);
+    scrollToBottom()
+  } else {
+    updateFriendLastMessage(String(message.fromUserId), message.content, message.timestamp)
+  }
 }
 
 // 更新好友列表中的最后消息与时间
 const updateFriendLastMessage = (friendId, lastMessage, ts) => {
   const friend = friends.value.find(f => f.id === friendId)
-  if (friend) { friend.lastMessage = lastMessage; friend.lastMessageTime = formatTime(ts ?? Date.now()) }
+  if (friend) {
+    friend.lastMessage = lastMessage;
+    friend.lastMessageTime = formatTime(ts ?? Date.now())
+  }
 }
 
 // 头像选择
@@ -228,21 +294,77 @@ const getAvatarFor = (uid) => {
 // 上报已读
 const reportRead = async () => {
   if (!selectedFriendId.value) return
-  try { await request.post('/chat/ack/read', { from_user_id: String(selectedFriendId.value) }) } catch {}
+  try {
+    await request.post('/chat/ack/read', {from_user_id: String(selectedFriendId.value)})
+  } catch {
+  }
 }
 
 // 滚动到底部
-const scrollToBottom = () => { nextTick(() => { if (chatHistoryEl.value) { chatHistoryEl.value.scrollTop = chatHistoryEl.value.scrollHeight; isAtBottom.value = true } }) }
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (chatHistoryEl.value) {
+      chatHistoryEl.value.scrollTop = chatHistoryEl.value.scrollHeight;
+      isAtBottom.value = true
+    }
+  })
+}
 
 // 日期分隔逻辑与格式化
-const shouldShowDateSeparator = (index) => { if (index === 0) return true; const prev = chatHistory.value[index - 1]; const curr = chatHistory.value[index]; if (!prev || !curr) return false; return getDateKey(prev.sendTime) !== getDateKey(curr.sendTime) }
-const getDateKey = (timestamp) => { const t = normalizeTs(timestamp); if (!Number.isFinite(t)) return ''; return new Date(t).toDateString() }
-const getDateSeparatorText = (timestamp) => { const t = normalizeTs(timestamp); if (!Number.isFinite(t)) return ''; return new Date(t).toLocaleDateString() }
-const formatTime = (timestamp) => { const t = normalizeTs(timestamp); if (!Number.isFinite(t)) return ''; const date = new Date(t); return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) }
+const shouldShowDateSeparator = (index) => {
+  if (index === 0) return true;
+  const prev = chatHistory.value[index - 1];
+  const curr = chatHistory.value[index];
+  if (!prev || !curr) return false;
+  return getDateKey(prev.sendTime) !== getDateKey(curr.sendTime)
+}
+const getDateKey = (timestamp) => {
+  const t = normalizeTs(timestamp);
+  if (!Number.isFinite(t)) return '';
+  return new Date(t).toDateString()
+}
+const getDateSeparatorText = (timestamp) => {
+  const t = normalizeTs(timestamp);
+  if (!Number.isFinite(t)) return '';
+  return new Date(t).toLocaleDateString()
+}
+const formatTime = (timestamp) => {
+  const t = normalizeTs(timestamp);
+  if (!Number.isFinite(t)) return '';
+  const date = new Date(t);
+  return date.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})
+}
 
 // 工具方法：读取用户ID、解析时间与生成消息ID
-const getUserId = () => { const s = localStorage.getItem('account'); if (!s) return ''; try { const u = JSON.parse(s); return u?.id != null ? String(u.id) : '' } catch { return '' } }
-const normalizeTs = (ts) => { if (typeof ts === 'number') return ts; if (typeof ts === 'string') { const m = ts.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(?:Z)?$/); if (m) { const [_, y, mo, d, h, mi, s, ms] = m; const msInt = ms ? parseInt(ms.padEnd(3, '0'), 10) : 0; return new Date(parseInt(y,10), parseInt(mo,10)-1, parseInt(d,10), parseInt(h,10), parseInt(mi,10), parseInt(s,10), msInt).getTime() } const n = Date.parse(ts); return Number.isNaN(n) ? NaN : n } try { const n = new Date(ts).getTime(); return Number.isNaN(n) ? NaN : n } catch { return NaN } }
+const getUserId = () => {
+  const s = localStorage.getItem('account');
+  if (!s) return '';
+  try {
+    const u = JSON.parse(s);
+    return u?.id != null ? String(u.id) : ''
+  } catch {
+    return ''
+  }
+}
+const normalizeTs = (ts) => {
+  if (typeof ts === 'number') return ts;
+  if (typeof ts === 'string') {
+    const m = ts.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(?:Z)?$/);
+    if (m) {
+      const [_, y, mo, d, h, mi, s, ms] = m;
+      const msInt = ms ? parseInt(ms.padEnd(3, '0'), 10) : 0;
+      return new Date(parseInt(y, 10), parseInt(mo, 10) - 1, parseInt(d, 10), parseInt(h, 10), parseInt(mi, 10), parseInt(s, 10), msInt).getTime()
+    }
+    const n = Date.parse(ts);
+    return Number.isNaN(n) ? NaN : n
+  }
+  try {
+    const n = new Date(ts).getTime();
+    return Number.isNaN(n) ? NaN : n
+  } catch {
+    return NaN
+  }
+}
 const generateMsgId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 </script>
 <style scoped>
@@ -376,8 +498,13 @@ const generateMsgId = () => `msg_${Date.now()}_${Math.random().toString(36).subs
   background-color: #9e9e9e;
 }
 
-.status-dot.online { background-color: #4caf50; }
-.status-dot.offline { background-color: #9e9e9e; }
+.status-dot.online {
+  background-color: #4caf50;
+}
+
+.status-dot.offline {
+  background-color: #9e9e9e;
+}
 
 .chat-history {
   flex: 1;
@@ -391,8 +518,14 @@ const generateMsgId = () => `msg_${Date.now()}_${Math.random().toString(36).subs
   display: flex;
   margin: 6px 16px;
 }
-.message-row.left { justify-content: flex-start; }
-.message-row.right { justify-content: flex-end;}
+
+.message-row.left {
+  justify-content: flex-start;
+}
+
+.message-row.right {
+  justify-content: flex-end;
+}
 
 .msg-avatar {
   width: 28px;
@@ -407,13 +540,17 @@ const generateMsgId = () => `msg_${Date.now()}_${Math.random().toString(36).subs
   max-width: 68%;
   padding: 10px 12px;
   border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
+
 .bubble.left {
   background-color: #ffffff;
   border: 1px solid #eee;
 }
-.bubble.right { background-color: #e3f2fd; }
+
+.bubble.right {
+  background-color: #e3f2fd;
+}
 
 .msg-content {
   white-space: pre-wrap;
@@ -467,8 +604,15 @@ const generateMsgId = () => `msg_${Date.now()}_${Math.random().toString(36).subs
   transition: background-color 0.2s;
   font-weight: 500;
 }
-.send-btn:hover:not(:disabled) { background-color: #1976d2; }
-.send-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+
+.send-btn:hover:not(:disabled) {
+  background-color: #1976d2;
+}
+
+.send-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
 
 .friend-name {
   font-weight: 500;
