@@ -1,446 +1,536 @@
-<template>
-  <div class="chat-container">
-    <!-- 左侧好友列表 -->
-    <div class="friends-list">
-      <div class="friends-header">
-        <h3>好友列表</h3>
-      </div>
-      <div class="friends-content">
-        <div
-            v-for="friend in friends"
-            :key="friend.id"
-            :class="['friend-item', { active: selectedFriendId === friend.id }]"
-            @click="selectFriend(friend)"
-        >
-          <div class="friend-avatar">
-            <img :src="friend.avatarUrl || '/default-avatar.png'" alt="好友头像">
-          </div>
-          <div class="friend-info">
-            <div class="friend-name">{{ friend.nickname }}</div>
-            <div class="friend-last-message">{{ friend.lastMessage }}</div>
-          </div>
-          <div class="friend-time">{{ friend.lastMessageTime }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 右侧聊天区域 -->
-    <div class="chat-main" v-if="selectedFriend">
-      <!-- 聊天头部 -->
-      <div class="chat-header">
-        <div class="current-friend-info">
-          <img :src="selectedFriend.avatarUrl || '/default-avatar.png'" class="header-avatar"
-               @click="toUser(selectedFriend.id)" style="cursor: pointer;">
-          <div class="chat-title">
-            <div class="current-friend-name" @click="toUser(selectedFriend.id)" style="cursor: pointer;">
-              {{ selectedFriend.nickname }}
-            </div>
-            <div class="current-friend-status">
-              <span :class="['status-dot', isPolling ? 'online' : 'offline']"></span>
-              {{ isPolling ? '在线' : '离线' }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 聊天记录区域 -->
-      <div class="chat-history" ref="chatHistoryEl">
-        <div v-if="chatHistory.length === 0" class="no-messages">暂无聊天记录，开始聊天吧！</div>
-        <transition-group name="message-list" tag="div">
-          <template v-for="(msg, index) in chatHistory" :key="msg.id">
-            <div v-if="shouldShowDateSeparator(index)" class="date-separator" :key="`date-${getDateKey(msg.sendTime)}`">
-              {{ getDateSeparatorText(msg.sendTime) }}
-            </div>
-            <div class="message-row" :class="msg.fromUid === currentUid ? 'right' : 'left'"
-                 @transitionend="handleTransitionEnd(msg)">
-              <img v-if="msg.fromUid !== currentUid" class="msg-avatar" :src="getAvatarFor(msg.fromUid)" alt="">
-              <div class="bubble" :class="msg.fromUid === currentUid ? 'right' : 'left'">
-                <div class="msg-content">{{ msg.content }}</div>
-                <div class="msg-time">{{ formatTime(msg.sendTime) }}</div>
-              </div>
-              <img v-if="msg.fromUid === currentUid" class="msg-avatar" :src="getAvatarFor(msg.fromUid)" alt="">
-            </div>
-          </template>
-        </transition-group>
-        <div v-if="isAtBottom && chatHistory.length > 0" class="at-bottom-tip">已显示全部消息</div>
-      </div>
-
-      <!-- 消息输入区域 -->
-      <div class="chat-input">
-        <textarea v-model="message" rows="2" placeholder="请输入消息..." @keyup.enter="sendMessage"></textarea>
-        <button class="send-btn" @click="sendMessage" :disabled="!message.trim()">发送</button>
-      </div>
-    </div>
-
-    <!-- 未选择好友时的提示 -->
-    <div class="no-selection" v-else>
-      <p>请选择一个好友开始聊天</p>
-    </div>
-  </div>
-</template>
-
 <script setup>
-import {ref, onMounted, onBeforeUnmount, nextTick} from 'vue'
-import {useRouter} from 'vue-router'
-import request from '@/utils/request'
+import {ref, onBeforeUnmount, nextTick} from 'vue'
+import {useRouter, useRoute} from 'vue-router'
+import request from '../../utils/request'
+import {serverHost} from '../../../config/config.default'
+import {ElMessage} from 'element-plus'
+import {ArrowLeft, ChatRound, UploadFilled, Picture, Position} from '@element-plus/icons-vue'
 
 const router = useRouter()
+const route = useRoute()
 
-// 跳转到用户主页
-const toUser = (userId) => {
-  router.push('/front/user?id=' + userId)
-}
+const account = ref(localStorage.getItem('account') ? JSON.parse(localStorage.getItem('account')) : {})
+const chatUser = ref({})
+const users = ref([])
+const userIds = ref([])
+const messages = ref([])
+const text = ref('')
+const userId = ref(route.query.userId)
+const messagesContainer = ref(null)
 
-// 关键状态（精简保留）
-const isPolling = ref(false)
-const pollSince = ref(null)
-const pollBackoffMs = ref(1000)
-const pollController = ref(null)
-const currentUid = ref('')
-const friends = ref([])
-const selectedFriendId = ref('')
-const selectedFriend = ref(null)
-const chatHistory = ref([])
-const message = ref('')
-const isAtBottom = ref(true)
-const chatHistoryEl = ref(null)
-
-// 初始化：获取当前用户并加载好友与其最后消息
-onMounted(async () => {
-  currentUid.value = getUserId()
-  if (!currentUid.value) {
-    try {
-      const res = await request.get('/web/userInfo')
-      const u = res.data
-      if (u && u.id != null) {
-        const acc = {id: u.id, nickname: u.nickname, avatarUrl: u.avatarUrl}
-        localStorage.setItem('account', JSON.stringify(acc))
-        currentUid.value = String(u.id)
-      }
-    } catch {
-    }
-  }
-  await loadFriendsList()
-})
-
-// 卸载：停止轮询
-onBeforeUnmount(() => {
-  isPolling.value = false
-  if (pollController.value) pollController.value.abort()
-})
-
-// 加载好友列表并填充最后消息
-const loadFriendsList = async () => {
-  try {
-    const res = await request.get('/follow/friend/list')
-    const arr = res.data?.friends || []
-    friends.value = arr.map(x => ({
-      id: String(x.user_id),
-      nickname: x.nickname || '未知用户',
-      avatarUrl: x.avatar_url,
-      lastMessage: '',
-      lastMessageTime: ''
-    }))
-    await Promise.all(friends.value.map(async (f) => {
-      try {
-        const r = await request.get('/chat/last', {params: {uid: String(f.id)}})
-        const m = r.data?.message
-        if (m) {
-          f.lastMessage = m.content || '';
-          f.lastMessageTime = formatTime(m.sendTime)
+const loadUser = () => {
+  request.get('/chat/user').then(res => {
+    users.value = res.data
+    init()
+    //如果是聊一聊进来的，那么判断一下是否和当前用户沟通过
+    if (userId.value) {
+      //如果一个也没沟通过，直接创建一个新的对话
+      if (users.value.length === 0) {
+        request.get('/chat/user/' + userId.value).then(res => {
+          const user = res.data
+          users.value.unshift(res.data)
+          changeUser(user)
+          init()
+        })
+      } else {
+        //如果以前和人沟通过，判断以前是否是存在对话记录
+        let user = users.value.find(item => item.id === Number(userId.value))
+        //没有对话记录，创建一个新的对话
+        if (!user) {
+          request.get('/chat/user/' + userId.value).then(res => {
+            user = res.data
+            users.value.unshift(res.data)
+            changeUser(user)
+            init()
+          })
+        } else {
+          //如果沟通过，直接跳转
+          changeUser(user)
+          init()
         }
-      } catch {
       }
-    }))
-  } catch {
+    }
+  })
+}
+loadUser()
+
+let socket = null
+
+const changeUser = (user) => {
+
+  if (chatUser.value.id !== user.id) {
+    chatUser.value = user
+    users.value.find(item => item.id === user.id).count = 0
+    loadMessage(account.value.id, chatUser.value.id)
   }
+
 }
 
-// 选择好友：加载历史、开始轮询并上报已读
-const selectFriend = async (friend) => {
-  selectedFriendId.value = friend.id
-  selectedFriend.value = friend
-  await loadChatHistory()
-  pollSince.value = null
-  startPolling()
-  reportRead()
+const loadMessage = (fromUserId, toUserId) => {
+  request.get('/chat/message', {
+    params: {
+      fromUserId: fromUserId,
+      toUserId: toUserId
+    }
+  }).then(res => {
+    messages.value = res.data
+    scrollToBottom()
+    clear()
+  })
 }
 
-// 加载与选中好友的历史消息
-const loadChatHistory = async () => {
-  if (!selectedFriendId.value) return
-  try {
-    const res = await request.get('/chat/history', {
-      params: {
-        uid1: String(currentUid.value),
-        uid2: String(selectedFriendId.value)
-      }
-    })
-    const arr = res.data?.messages || []
-    chatHistory.value = arr.map(x => ({
-      id: x.id || generateMsgId(),
-      content: x.content || '',
-      fromUid: String(x.fromUid),
-      toUid: String(x.toUid),
-      sendTime: normalizeTs(x.sendTime),
-      isNew: false
-    }))
-    nextTick(() => {
-      scrollToBottom()
-    })
-  } catch {
+const init = () => {
+  const userId = account.value.id
+  const socketUrl = "ws://localhost:9090/chatServer/" + userId;
+
+  // 开启一个websocket服务
+  socket = new WebSocket(socketUrl)
+
+  // 打开事件
+  socket.onopen = () => {
+    console.log("websocket已打开")
   }
-}
 
-// 长轮询：拉取新消息（带取消控制与指数退避）
-const startPolling = () => {
-  if (isPolling.value) return
-  isPolling.value = true
-  pollController.value = new AbortController()
-  const loop = async () => {
-    if (!isPolling.value) return
-    try {
-      const res = await request.get('/chat/poll', {
-        params: {since: pollSince.value, timeoutSeconds: 30},
-        timeout: 35000,
-        signal: pollController.value.signal
+  // 接受消息事件
+  socket.onmessage = (msg) => {
+    const data = JSON.parse(msg.data)
+    //如果发来的数据类型是广播，广播给所有在线连接:当前所有在线用户id
+    if (data.messageType === 'broadcast') {
+      userIds.value = data.userIds
+      users.value.forEach(item => {
+        // 如果用户id在userIds数组中，设置online为true，否则为false
+        item.online = userIds.value.includes(item.id)
       })
-      const data = res.data || res
-      const list = data.messages || []
-      if (list.length > 0) {
-        list.forEach(m => handleChatMessage({
-          fromUserId: m.fromUid,
-          toUserId: m.toUid,
-          content: m.content,
-          timestamp: normalizeTs(m.sendTime)
-        }))
-        pollSince.value = data.next_since || list[list.length - 1].id
+    }
+    //如果发来的数据类型是聊天，正常执行聊天渲染逻辑
+    else if (data.messageType === 'chat') {
+      // 只有发来数据用户是和当前正在聊天用户匹配时候，再去给页面上加数据
+      if (data.fromUserId === chatUser.value.id) {
+        const message = {
+          text: data.text,
+          type: data.type,
+          time: data.time,
+          fromUserId: data.fromUserId,
+          toUserId: data.toUserId,
+          isRead: false,
+        }
+        createMessage(message)
+      } else {
+        //否则需要先判断聊天列表里是否有历史记录
+        let user = users.value.find(item => item.id === Number(data.fromUserId))
+        //如果有，则直接设置未读+1
+        if (user) {
+          users.value.find(item => item.id === data.fromUserId).count++
+        } else {
+          //如果没有，就开一个新会话,并且判断一下，这个用户是否在线，设置在线情况，同时未读设置为1
+          request.get('/chat/user/' + data.fromUserId).then(res => {
+            user = res.data
+            user.count = 1
+            user.online = userIds.value.includes(data.fromUserId)
+            users.value.unshift(user)
+          })
+        }
       }
-      pollBackoffMs.value = 1000
-      setTimeout(loop, 0)
-    } catch (e) {
-      const msg = String(e?.message || '')
-      if (e?.code === 'ERR_CANCELED' || msg.toLowerCase().includes('aborted')) return
-      pollBackoffMs.value = Math.min(pollBackoffMs.value * 2, 15000)
-      setTimeout(loop, pollBackoffMs.value)
     }
   }
-  loop()
-}
 
-// 发送消息：使用服务端时间并更新好友摘要
-const sendMessage = async () => {
-  const content = message.value.trim()
-  if (!content || !selectedFriendId.value) return
-  try {
-    const clientMsgId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    const res = await request.post('/chat/send', {
-      to_user_id: String(selectedFriendId.value),
-      content,
-      client_msg_id: clientMsgId
-    }, {timeout: 10000})
-    const serverTs = normalizeTs(res.data?.created_at ?? res.data?.sendTime ?? Date.now())
-    const sentMessage = {
-      id: res.data?.id || generateMsgId(),
-      content,
-      fromUid: currentUid.value,
-      toUid: selectedFriendId.value,
-      sendTime: serverTs,
-      isNew: false
-    }
-    chatHistory.value.push(sentMessage)
-    scrollToBottom()
-    message.value = ''
-    updateFriendLastMessage(selectedFriendId.value, content, serverTs)
-  } catch {
+  // 错误事件
+  socket.onerror = (error) => {
+    console.error("WebSocket错误:", error)
   }
 }
 
-// 处理新消息：落入当前会话或更新好友摘要
-const handleChatMessage = (message) => {
-  const chatMessage = {
-    id: generateMsgId(),
-    content: message.content || '',
-    fromUid: String(message.fromUserId),
-    toUid: String(message.toUserId),
-    sendTime: message.timestamp || Date.now(),
-    isNew: true
+const sendMessage = () => {
+  if (!chatUser.value.id) {
+    ElMessage({type: 'warning', message: "请选择聊天对象"})
+    return
   }
-  if (selectedFriendId.value === String(message.fromUserId)) {
-    chatHistory.value.push(chatMessage);
-    scrollToBottom()
-  } else {
-    updateFriendLastMessage(String(message.fromUserId), message.content, message.timestamp)
+  if (!text.value) {
+    ElMessage({type: 'warning', message: "请输入内容"})
+    return
   }
+
+  const message = {
+    text: text.value,
+    type: '文字',
+    time: new Date().toLocaleString('zh-cn'),
+    fromUserId: account.value.id,
+    toUserId: chatUser.value.id,
+    isRead: false
+  }
+
+  socket.send(JSON.stringify(message))
+  createMessage(message)
+  saveMessage(message)
+  text.value = ''
 }
 
-// 更新好友列表中的最后消息与时间
-const updateFriendLastMessage = (friendId, lastMessage, ts) => {
-  const friend = friends.value.find(f => f.id === friendId)
-  if (friend) {
-    friend.lastMessage = lastMessage;
-    friend.lastMessageTime = formatTime(ts ?? Date.now())
+const sendImgMessage = (res) => {
+  const message = {
+    text: res,
+    type: '图片',
+    time: new Date().toLocaleString('zh-cn'),
+    fromUserId: account.value.id,
+    toUserId: chatUser.value.id,
+    isRead: false
   }
+  socket.send(JSON.stringify(message))
+  createMessage(message)
+  saveMessage(message)
 }
 
-// 头像选择
-const getAvatarFor = (uid) => {
-  const f = friends.value.find(x => String(x.id) === String(uid))
-  if (f && f.avatarUrl) return f.avatarUrl
-  const account = localStorage.getItem('account') ? JSON.parse(localStorage.getItem('account')) : null
-  return String(uid) === String(currentUid.value) ? (account?.avatarUrl || '/default-avatar.png') : '/default-avatar.png'
+const saveMessage = (message) => {
+  request.post('/chat', message).then(res => {
+    clear()
+  })
 }
 
-// 上报已读
-const reportRead = async () => {
-  if (!selectedFriendId.value) return
-  try {
-    await request.post('/chat/ack/read', {from_user_id: String(selectedFriendId.value)})
-  } catch {
-  }
+const createMessage = (message) => {
+  messages.value.push(message)
+  scrollToBottom()
 }
 
-// 滚动到底部
 const scrollToBottom = () => {
   nextTick(() => {
-    if (chatHistoryEl.value) {
-      chatHistoryEl.value.scrollTop = chatHistoryEl.value.scrollHeight;
-      isAtBottom.value = true
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
     }
   })
 }
 
-// 日期分隔逻辑与格式化
-const shouldShowDateSeparator = (index) => {
-  if (index === 0) return true;
-  const prev = chatHistory.value[index - 1];
-  const curr = chatHistory.value[index];
-  if (!prev || !curr) return false;
-  return getDateKey(prev.sendTime) !== getDateKey(curr.sendTime)
-}
-const getDateKey = (timestamp) => {
-  const t = normalizeTs(timestamp);
-  if (!Number.isFinite(t)) return '';
-  return new Date(t).toDateString()
-}
-const getDateSeparatorText = (timestamp) => {
-  const t = normalizeTs(timestamp);
-  if (!Number.isFinite(t)) return '';
-  return new Date(t).toLocaleDateString()
-}
-const formatTime = (timestamp) => {
-  const t = normalizeTs(timestamp);
-  if (!Number.isFinite(t)) return '';
-  const date = new Date(t);
-  return date.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})
+const clear = () => {
+  request.get('/chat/clear', {
+    params: {
+      fromUserId: account.value.id,
+      toUserId: chatUser.value.id
+    }
+  })
 }
 
-// 工具方法：读取用户ID、解析时间与生成消息ID
-const getUserId = () => {
-  const s = localStorage.getItem('account');
-  if (!s) return '';
-  try {
-    const u = JSON.parse(s);
-    return u?.id != null ? String(u.id) : ''
-  } catch {
-    return ''
-  }
-}
-const normalizeTs = (ts) => {
-  if (typeof ts === 'number') return ts;
-  if (typeof ts === 'string') {
-    const m = ts.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(?:Z)?$/);
-    if (m) {
-      const [_, y, mo, d, h, mi, s, ms] = m;
-      const msInt = ms ? parseInt(ms.padEnd(3, '0'), 10) : 0;
-      return new Date(parseInt(y, 10), parseInt(mo, 10) - 1, parseInt(d, 10), parseInt(h, 10), parseInt(mi, 10), parseInt(s, 10), msInt).getTime()
+onBeforeUnmount(() => {
+  if (socket) {
+    socket.onclose = () => {
+      console.log("websocket已关闭")
     }
-    const n = Date.parse(ts);
-    return Number.isNaN(n) ? NaN : n
+    socket.close()
   }
-  try {
-    const n = new Date(ts).getTime();
-    return Number.isNaN(n) ? NaN : n
-  } catch {
-    return NaN
+})
+
+const handleKeydown = (e) => {
+  if (e.ctrlKey && e.key === 'Enter') {
+    sendMessage()
   }
 }
-const generateMsgId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 </script>
+
+<template>
+  <div class="chat-container">
+    <div class="users-panel">
+      <div class="panel-header">
+        <div class="header-left">
+          <h3>聊天列表</h3>
+        </div>
+        <el-badge :value="users.length" class="user-badge" type="primary"/>
+      </div>
+
+      <div class="users-list">
+        <div
+            v-for="user in users"
+            :key="user.id"
+            class="user-item"
+            :class="{ 'active': chatUser.id === user.id }"
+            @click="changeUser(user)"
+        >
+          <div class="user-avatar">
+            <img :src="user.avatarUrl" alt="用户头像">
+            <span class="user-status" :class="{ 'online': user.online, 'offline': !user.online }"></span>
+            <el-badge
+                v-if="user.count > 0"
+                :value="user.count"
+                :max="99"
+                class="unread-badge"
+                type="danger"
+            />
+          </div>
+          <div class="user-info">
+            <div class="user-name">{{ user.nickname }}</div>
+            <div class="user-status-text">
+              <span :class="user.online ? 'status-online' : 'status-offline'">
+                {{ user.online ? '在线' : '离线' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-panel">
+      <template v-if="chatUser.id">
+        <div class="chat-header">
+          <div class="user-info">
+            <span class="user-name">{{ chatUser.nickname }}</span>
+          </div>
+        </div>
+
+        <div class="messages-container" ref="messagesContainer">
+          <div
+              v-for="(message, index) in messages"
+              :key="index"
+              class="message-wrapper"
+              :class="{ 'message-self': message.fromUserId === account.id }"
+          >
+            <div class="message-avatar" v-if="message.fromUserId !== account.id">
+              <img :src="users.find(item=>item.id===message.fromUserId)?.avatarUrl" alt="头像">
+            </div>
+
+            <div class="message-content">
+              <div class="message-sender" v-if="message.fromUserId !== account.id">
+                {{ users.find(item => item.id === message.fromUserId)?.nickname }}
+              </div>
+
+              <div
+                  v-if="message.type === '文字'"
+                  class="message-bubble"
+                  :class="{ 'bubble-self': message.fromUserId === account.id, 'bubble-other': message.fromUserId !== account.id }"
+              >{{ message.text }}
+              </div>
+
+              <div
+                  v-else-if="message.type === '图片'"
+                  class="message-image-wrapper"
+                  :class="{ 'image-self': message.fromUserId === account.id }"
+              >
+                <el-image
+                    :src="message.text"
+                    fit="cover"
+                    class="message-image"
+                    :preview-src-list="[message.text]"
+                    preview-teleported
+                >
+                  <template #error>
+                    <div class="image-error">
+                      <el-icon>
+                        <Picture/>
+                      </el-icon>
+                      <span>加载失败</span>
+                    </div>
+                  </template>
+                </el-image>
+              </div>
+
+              <div class="message-time">{{ message.time }}</div>
+            </div>
+
+            <div class="message-avatar" v-if="message.fromUserId === account.id">
+              <img :src="account.avatarUrl" alt="头像">
+            </div>
+
+          </div>
+        </div>
+
+        <div class="input-container">
+          <div class="message-editor">
+            <div class="editor-toolbar">
+              <el-upload
+                  :action="`${serverHost}/web/upload`"
+                  :on-success="sendImgMessage"
+                  :show-file-list="false"
+              >
+                <el-button
+                    type="default"
+                    :icon="UploadFilled"
+                    size="small"
+                    class="upload-btn"
+                >
+                  图片
+                </el-button>
+              </el-upload>
+            </div>
+
+            <el-input
+                type="textarea"
+                v-model="text"
+                :rows="3"
+                placeholder="请输入消息内容..."
+                resize="none"
+                @keydown="handleKeydown"
+                class="message-textarea"
+                @focus="clear"
+            />
+          </div>
+
+          <div class="send-actions">
+            <span class="hint">
+              <el-icon size="14"><Position/></el-icon>
+              按 Ctrl + Enter 发送
+            </span>
+            <el-button
+                type="primary"
+                @click="sendMessage"
+                :disabled="!text || !chatUser.id"
+            >
+              发送消息
+            </el-button>
+          </div>
+        </div>
+      </template>
+
+      <div class="no-chat-selected" v-else>
+        <el-icon :size="64">
+          <ChatRound/>
+        </el-icon>
+        <h3>请选择一位用户开始聊天</h3>
+        <p>从左侧列表选择一位用户开始对话</p>
+      </div>
+    </div>
+  </div>
+</template>
+
 <style scoped>
 .chat-container {
   display: flex;
-  height: calc(100dvh - var(--app-header-height, 64px));
-  background-color: #f5f5f5;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  height: calc(90vh - 90px);
+  min-height: 600px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin: 20px auto;
+  max-width: 1200px;
 }
 
-/* 左侧好友列表样式 */
-.friends-list {
-  width: 300px;
-  background-color: #fff;
-  border-right: 1px solid #e0e0e0;
+.users-panel {
+  width: 280px;
+  border-right: 1px solid #f0f0f0;
   display: flex;
   flex-direction: column;
+  background-color: #fafafa;
 }
 
-.friends-header {
-  padding: 16px;
-  border-bottom: 1px solid #e0e0e0;
-  background-color: #f8f9fa;
+.panel-header {
+  height: 60px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fff;
 }
 
-.friends-header h3 {
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.back-button {
+  padding: 0;
+}
+
+.panel-header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #333;
 }
 
-.friends-content {
+.user-badge {
+  margin-top: 2px;
+}
+
+.users-list {
   flex: 1;
   overflow-y: auto;
+  padding: 10px;
 }
 
-.friend-item {
+.user-item {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 12px 15px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s;
-  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+  margin-bottom: 6px;
+  position: relative;
 }
 
-.friend-item:hover {
-  background-color: #f8f9fa;
+.user-item:hover {
+  background-color: #f5f5f5;
 }
 
-.friend-item.active {
-  background-color: #e3f2fd;
-  border-left: 4px solid #2196f3;
+.user-item.active {
+  background-color: #f0f7ff;
 }
 
-.friend-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  overflow: hidden;
+.user-avatar {
+  position: relative;
   margin-right: 12px;
-  background-color: #e0e0e0;
 }
 
-.friend-avatar img {
-  width: 100%;
-  height: 100%;
+.user-avatar img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
   object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 2px solid #fff;
 }
 
-.friend-info {
+.unread-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+}
+
+.unread-badge :deep(.el-badge__content) {
+  border: 2px solid #fff;
+  font-size: 11px;
+  height: 18px;
+  line-height: 14px;
+  padding: 0 5px;
+  font-weight: 600;
+}
+
+.user-status {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  transition: background-color 0.3s ease;
+}
+
+.user-status.online {
+  background-color: #52c41a; /* 绿色表示在线 */
+}
+
+.user-status.offline {
+  background-color: #d9d9d9; /* 灰色表示离线 */
+}
+
+.user-info {
   flex: 1;
-  min-width: 0;
+  overflow: hidden;
 }
 
-.chat-main {
+.user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.user-status-text {
+  font-size: 12px;
+}
+
+.chat-panel {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -448,239 +538,253 @@ const generateMsgId = () => `msg_${Date.now()}_${Math.random().toString(36).subs
 }
 
 .chat-header {
-  height: 64px;
-  padding: 0 16px;
-  border-bottom: 1px solid #e0e0e0;
+  height: 60px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #f0f0f0;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  background-color: #f8f9fa;
-}
-
-.current-friend-info {
-  display: flex;
   align-items: center;
+  background-color: #fff;
 }
 
-.header-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  overflow: hidden;
-  background-color: #e0e0e0;
-}
-
-.chat-title {
-  display: flex;
-  flex-direction: column;
-  margin-left: 12px;
-}
-
-.current-friend-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-}
-
-.current-friend-status {
-  display: flex;
-  align-items: center;
-  margin-top: 2px;
-  font-size: 12px;
-  color: #666;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 6px;
-  background-color: #9e9e9e;
-}
-
-.status-dot.online {
-  background-color: #4caf50;
-}
-
-.status-dot.offline {
-  background-color: #9e9e9e;
-}
-
-.chat-history {
+.messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 0 8px;
-  background-color: #fff;
-  min-height: 0;
+  padding: 20px;
+  background-color: #f9fafc;
+  background-image: linear-gradient(rgba(240, 240, 240, 0.5) 1px, transparent 1px),
+  linear-gradient(90deg, rgba(240, 240, 240, 0.5) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
-.message-row {
+.message-wrapper {
   display: flex;
-  margin: 6px 16px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+  gap: 12px;
 }
 
-.message-row.left {
-  justify-content: flex-start;
-}
-
-.message-row.right {
+.message-wrapper.message-self {
   justify-content: flex-end;
 }
 
-.msg-avatar {
-  width: 28px;
-  height: 28px;
+.message-avatar img {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background-color: #e0e0e0;
   object-fit: cover;
-  margin: 0 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 2px solid #fff;
+  flex-shrink: 0;
 }
 
-.bubble {
-  max-width: 68%;
-  padding: 10px 12px;
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-
-.bubble.left {
-  background-color: #ffffff;
-  border: 1px solid #eee;
-}
-
-.bubble.right {
-  background-color: #e3f2fd;
-}
-
-.msg-content {
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: #333;
-  font-size: 14px;
-}
-
-.msg-time {
-  text-align: right;
-  font-size: 12px;
-  color: #999;
-  margin-top: 6px;
-}
-
-.chat-input {
-  border-top: 1px solid #e0e0e0;
-  background-color: #fafafa;
-  padding: 10px 12px;
+.message-content {
+  max-width: 60%;
   display: flex;
+  flex-direction: column;
+}
+
+.message-wrapper:not(.message-self) .message-content {
+  align-items: flex-start;
+}
+
+.message-wrapper.message-self .message-content {
   align-items: flex-end;
-  gap: 8px;
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
 }
 
-.chat-input textarea {
-  flex: 1;
-  padding: 10px 14px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  outline: none;
-  font-size: 14px;
-  resize: none;
-}
-
-.chat-input textarea:focus {
-  border-color: #2196f3;
-  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
-}
-
-.send-btn {
-  padding: 10px 18px;
-  background-color: #2196f3;
-  color: #fff;
-  border: none;
-  border-radius: 20px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  font-weight: 500;
-}
-
-.send-btn:hover:not(:disabled) {
-  background-color: #1976d2;
-}
-
-.send-btn:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.friend-name {
-  font-weight: 500;
-  color: #333;
+.message-sender {
+  font-size: 12px;
+  color: #999;
   margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 0 4px;
 }
 
-.friend-last-message {
-  font-size: 12px;
-  color: #666;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.friend-time {
-  font-size: 11px;
-  color: #999;
-}
-
-.no-messages {
-  text-align: center;
-  color: #999;
-  padding: 40px 0;
-}
-
-.date-separator {
-  text-align: center;
-  margin: 16px 0;
-  color: #999;
-  font-size: 12px;
+.message-bubble {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  word-break: break-word;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   position: relative;
+  max-width: 100%;
 }
 
-.date-separator::before,
-.date-separator::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 30%;
-  height: 1px;
-  background-color: #ddd;
+.message-bubble.bubble-other {
+  background-color: #fff;
+  color: #333;
+  border-top-left-radius: 4px;
 }
 
-.date-separator::before {
-  left: 0;
+.message-bubble.bubble-self {
+  background-color: #1890ff;
+  color: #fff;
+  border-top-right-radius: 4px;
 }
 
-.date-separator::after {
-  right: 0;
+.message-image-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: #f5f5f5;
 }
 
-.at-bottom-tip {
-  text-align: center;
-  color: #999;
-  font-size: 12px;
-  padding: 8px 0;
+.message-image-wrapper.image-self {
+  border-top-right-radius: 4px;
 }
 
-.no-selection {
-  flex: 1;
+.message-image-wrapper:not(.image-self) {
+  border-top-left-radius: 4px;
+}
+
+.message-image {
+  width: 200px;
+  height: 200px;
+  display: block;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.message-image:hover {
+  transform: scale(1.02);
+}
+
+.message-image :deep(.el-image__inner) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-error {
+  width: 200px;
+  height: 200px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  background-color: #f5f5f5;
   color: #999;
+  gap: 8px;
+}
+
+.image-error .el-icon {
+  font-size: 32px;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #999;
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.input-container {
+  padding: 15px 20px;
+  border-top: 1px solid #f0f0f0;
+  background-color: #fff;
+}
+
+.message-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
   background-color: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+}
+
+.upload-btn {
+  border-radius: 6px;
+  font-size: 13px;
+  height: 32px;
+  padding: 0 16px;
+  transition: all 0.3s ease;
+  border-color: #d9d9d9;
+}
+
+.upload-btn:hover {
+  color: #1890ff;
+  border-color: #1890ff;
+  background-color: #f0f7ff;
+}
+
+.message-textarea :deep(.el-textarea__inner) {
+  border-radius: 8px;
+  border-color: #e8e8e8;
+  padding: 12px;
+  transition: all 0.3s;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.message-textarea :deep(.el-textarea__inner):focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.send-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hint {
+  font-size: 12px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.no-chat-selected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  padding: 20px;
+  text-align: center;
+  background-color: #fafafa;
+}
+
+.no-chat-selected .el-icon {
+  margin-bottom: 20px;
+  color: #d9d9d9;
+}
+
+.no-chat-selected h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+}
+
+.no-chat-selected p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.users-list::-webkit-scrollbar,
+.messages-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.users-list::-webkit-scrollbar-thumb,
+.messages-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.users-list::-webkit-scrollbar-track,
+.messages-container::-webkit-scrollbar-track {
+  background-color: transparent;
 }
 </style>

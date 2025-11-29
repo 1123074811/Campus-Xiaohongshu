@@ -220,6 +220,14 @@ const routes = [
           title: '管理员管理'
         }
       },
+      {
+        path: 'chat',
+        name: 'BackChat',
+        component: () => import('../views/back/Chat.vue'),
+        meta: {
+          title: '管理员管理'
+        }
+      },
       // 后台子路由
     ]
   },

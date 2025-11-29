@@ -414,6 +414,13 @@ const toUser = (userId) =>{
         >
           {{ isFollowed ? '已关注' : '关注' }}
         </button>
+        <button
+            class="message-btn"
+            @click="router.push('/front/chat?userId='+userInfo.id)"
+            v-if="account.id!=id"
+        >
+          私信
+        </button>
       </div>
     </div>
 
@@ -809,6 +816,21 @@ const toUser = (userId) =>{
         &:hover {
           background-color: #e8e8e8;
         }
+      }
+    }
+    .message-btn {
+      background-color: #f0f0f0;
+      color: #666;
+      border: 1px solid #d9d9d9;
+      padding: 10px 24px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: #e8e8e8;
       }
     }
 

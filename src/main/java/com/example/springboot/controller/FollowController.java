@@ -114,48 +114,5 @@ public class FollowController {
         return Result.success(followService.page(new Page<>(pageNum, pageSize), queryWrapper));
     }
 
-    @GetMapping("/friend/list")
-    public Result friendList() {
-        Account account = TokenUtils.getCurrentUser();
-        if (account == null || account.getId() == null) {
-            return Result.error("401", "未登录");
-        }
-        LambdaQueryWrapper<Follow> myFollows = new LambdaQueryWrapper<>();
-        myFollows.eq(Follow::getUserId, account.getId());
-        List<Follow> iFollow = followService.list(myFollows);
-        List<Integer> candidates = iFollow.stream().map(Follow::getItemId).toList();
-        if (candidates.isEmpty()) {
-            return Result.success(List.of());
-        }
-        LambdaQueryWrapper<Follow> reverse = new LambdaQueryWrapper<>();
-        reverse.in(Follow::getUserId, candidates).eq(Follow::getItemId, account.getId());
-        List<Follow> mutual = followService.list(reverse);
-        Set<Integer> friendIds = new HashSet<>();
-        for (Follow f : mutual) friendIds.add(f.getUserId());
-        List<Object> friends = new ArrayList<>();
-        for (Integer fid : friendIds) {
-            var u = userService.getById(fid);
-            if (u != null) {
-                Map<String, Object> m = new HashMap<>();
-                m.put("user_id", u.getId());
-                m.put("nickname", u.getNickname());
-                m.put("avatar_url", u.getAvatarUrl());
-                friends.add(m);
-            }
-        }
-        return Result.success(Map.of("friends", friends));
-    }
-
-    @GetMapping("/friend/status")
-    public Result friendStatus(@RequestParam("user_id") Integer userId) {
-        Long last = ChatController.getLastActive(userId);
-        String status = "offline";
-        if (last != null && System.currentTimeMillis() - last <= 90_000) {
-            status = "online";
-        }
-        return Result.success(Map.of("status", status, "last_active_at", last));
-    }
-
-
 }
 

@@ -1,179 +1,203 @@
 package com.example.springboot.controller;
 
+import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.springboot.common.Result;
 import com.example.springboot.entity.Account;
-import com.example.springboot.entity.ChatMessage;
-import com.example.springboot.mapper.ChatMessageMapper;
+import com.example.springboot.entity.Chat;
+import com.example.springboot.entity.User;
+import com.example.springboot.service.IChatService;
+import com.example.springboot.service.IUserService;
 import com.example.springboot.utils.TokenUtils;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
+/**
+ * <p>
+ * 前端控制器
+ * </p>
+ */
 @RestController
+@RequestMapping("/chat")
 public class ChatController {
+
     @Resource
-    private ChatMessageMapper chatMessageMapper;
+    private IChatService chatService;
+    @Resource
+    private IUserService userService;
 
-    // 每个用户一个内存队列：用于长轮询期间及时推送新消息
-    private static final ConcurrentHashMap<Integer, LinkedBlockingQueue<ChatMessage>> userQueues = new ConcurrentHashMap<>();
-    // 最近心跳时间：用于简单在线状态判断
-    private static final ConcurrentHashMap<Integer, Long> userLastActive = new ConcurrentHashMap<>();
-
-    private static LinkedBlockingQueue<ChatMessage> getQueue(Integer userId) {
-        return userQueues.computeIfAbsent(userId, k -> new LinkedBlockingQueue<>());
-    }
-
-    public static Long getLastActive(Integer userId) {
-        return userLastActive.get(userId);
+    @PostMapping
+    public Result save(@RequestBody Chat chat) {
+        return Result.success(chatService.saveOrUpdate(chat));
     }
 
     /**
-     * 发送私聊消息
-     * - 写入数据库
-     * - 立即放入接收者队列（若在线，长轮询可立刻返回）
+     * 清空未读消息
+     * @param fromUserId
+     * @param toUserId
+     * @return
      */
-    @PostMapping("/chat/send")
-    public Result sendMessage(@RequestBody Map<String, Object> body) {
+    @GetMapping("/clear")
+    public Result clear(@RequestParam Integer fromUserId, @RequestParam Integer toUserId) {
+
+        // 查询对方发给当前用户发的未读消息
+        LambdaQueryWrapper<Chat> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Chat::getFromUserId,toUserId);
+        queryWrapper.eq(Chat::getToUserId,fromUserId);
+        queryWrapper.eq(Chat::getIsRead,false);
+        List<Chat> list = chatService.list(queryWrapper);
+        // 更新对方发给当前用户的消息为已读
+        list.stream().forEach(item->item.setIsRead(true));
+        //批量更新数据库
+        chatService.updateBatchById(list);
+
+        return Result.success();
+    }
+
+
+    /**
+     * 删除
+     * @param id
+     * @return
+     */
+    @DeleteMapping("/{id}")
+    public Result delete(@PathVariable Integer id) {
+        return Result.success(chatService.removeById(id));
+    }
+
+    /**
+     * 批量删除
+     * @param ids
+     * @return
+     */
+    @PostMapping("/del/batch")
+    public Result deleteBatch(@RequestBody List<Integer> ids) {
+        return Result.success(chatService.removeByIds(ids));
+    }
+
+    /**
+     * 获取对话
+     * @param fromUserId
+     * @param toUserId
+     * @return
+     */
+    @GetMapping("/message")
+    public Result messages(@RequestParam Integer fromUserId,
+                          @RequestParam Integer toUserId) {
+
+        // 获取两个用户间的所有对话
+        LambdaQueryWrapper<Chat> wrapper = new LambdaQueryWrapper<>();
+        wrapper.and(
+                i -> i.eq(Chat::getFromUserId, fromUserId).eq(Chat::getToUserId, toUserId)
+        ).or(
+                i -> i.eq(Chat::getFromUserId, toUserId).eq(Chat::getToUserId, fromUserId)
+        ).orderByAsc(Chat::getTime);
+
+        List<Chat> chatList = chatService.list(wrapper);
+
+        return Result.success(chatList);
+    }
+
+    @GetMapping("/user")
+    public Result users() {
         Account account = TokenUtils.getCurrentUser();
-        if (account == null || account.getId() == null) {
-            return Result.error("401", "未登录");
+
+        LambdaQueryWrapper<Chat> wrapper = new LambdaQueryWrapper<>();
+        wrapper.and(
+                i -> i.eq(Chat::getFromUserId, account.getId())
+        ).or(
+                i -> i.eq(Chat::getToUserId, account.getId())
+        ).orderByDesc(Chat::getTime);
+
+        // 获取与当前用户有关的所有对话
+        List<Chat> chatList = chatService.list(wrapper);
+
+        // 记录不同用户有多少消息是发给自己并且还未读的
+        Map<Integer, Long> unreadMap = chatList.stream().filter(item -> ObjectUtil.equals(item.getToUserId(), account.getId()) && !item.getIsRead()).collect(Collectors.groupingBy(Chat::getFromUserId, Collectors.counting()));
+
+        // 记录所有和自己聊过天的用户，可以使用LinkedHashSet保证有序
+        Set<Integer> userIds = new LinkedHashSet<>();
+
+        for (Chat chat : chatList) {
+            userIds.add(chat.getFromUserId());
+            userIds.add(chat.getToUserId());
         }
 
-        Object toUserIdObj = body.get("to_user_id");
-        Object contentObj = body.get("content");
-        String clientMsgId = body.get("client_msg_id") == null ? null : String.valueOf(body.get("client_msg_id"));
+        //排除自己
+        userIds.remove(account.getId());
 
-        if (toUserIdObj == null || contentObj == null) {
-            return Result.error("400", "参数不完整");
+        //如果没有对话过，直接返回
+        if (CollectionUtil.isEmpty(userIds)) {
+            return Result.success(new ArrayList<>());
         }
 
-        String toUserId = String.valueOf(toUserIdObj);
-        String content = String.valueOf(contentObj);
+        //和自己沟通过的所有用户
+        List<User> userList = userService.listByIds(userIds);
 
-        ChatMessage msg = new ChatMessage();
-        msg.setFromUid(String.valueOf(account.getId()));
-        msg.setToUid(toUserId);
-        msg.setContent(content);
-        msg.setSendTime(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-        msg.setStatus(0);
-
-        chatMessageMapper.insert(msg);
-
-        // 推入接收者队列（不阻塞，失败忽略）
-        try { getQueue(Integer.valueOf(toUserId)).offer(msg); } catch (Exception ignored) {}
-
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("id", msg.getId());
-        resp.put("created_at", msg.getSendTime());
-        resp.put("created_at_epoch", System.currentTimeMillis());
-        resp.put("client_msg_id", clientMsgId);
-        return Result.success(resp);
+        JSONArray array = new JSONArray();
+        for (User user : userList) {
+            JSONObject object = new JSONObject();
+            object.set("id", user.getId());
+            object.set("nickname", user.getNickname());
+            object.set("avatarUrl", user.getAvatarUrl());
+            object.set("count",unreadMap.getOrDefault(user.getId(),0L));
+            object.set("online",false);
+            array.add(object);
+        }
+        return Result.success(array);
     }
 
     /**
-     * 长轮询拉取新消息
-     * 策略：
-     * 1) 先从DB按id游标拉取大于since的消息
-     * 2) 若无，则阻塞等待队列消息（最多timeoutSeconds秒）
+     * 获取用户信息
+     * @param id
+     * @return
      */
-    @GetMapping("/chat/poll")
-    public Result poll(@RequestParam(required = false) Long since,
-                       @RequestParam(required = false, defaultValue = "30") Integer timeoutSeconds) throws InterruptedException {
-        Account account = TokenUtils.getCurrentUser();
-        if (account == null || account.getId() == null) {
-            return Result.error("401", "未登录");
-        }
-        Integer uid = account.getId();
-        userLastActive.put(uid, System.currentTimeMillis());
+    @GetMapping("/user/{id}")
+    public Result user(@PathVariable Integer id) {
+        User user = userService.getById(id);
 
-        List<ChatMessage> messages = new ArrayList<>();
+        JSONObject object = new JSONObject();
+        object.set("id", user.getId());
+        object.set("nickname", user.getNickname());
+        object.set("avatarUrl", user.getAvatarUrl());
+        object.set("count",0);
+        object.set("online",false);
 
-        if (since != null) {
-            List<ChatMessage> dbMessages = chatMessageMapper.selectList(
-                    new LambdaQueryWrapper<ChatMessage>()
-                            .eq(ChatMessage::getToUid, String.valueOf(uid))
-                            .gt(ChatMessage::getId, since)
-                            .orderByAsc(ChatMessage::getId)
-            );
-            messages.addAll(dbMessages);
-        }
-
-        if (messages.isEmpty()) {
-            ChatMessage first = getQueue(uid).poll(timeoutSeconds, TimeUnit.SECONDS);
-            if (first != null) {
-                messages.add(first);
-                getQueue(uid).drainTo(messages, 49);
-            }
-        }
-
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("messages", messages);
-        resp.put("next_since", messages.isEmpty() ? since : messages.get(messages.size() - 1).getId());
-        return Result.success(resp);
-    }
-    /**
-     * 已读回执：将指定会话消息标记为已读
-     */
-    @PostMapping("/chat/ack/read")
-    public Result ackRead(@RequestBody Map<String, Object> body) {
-        Account account = TokenUtils.getCurrentUser();
-        if (account == null || account.getId() == null) {
-            return Result.error("401", "未登录");
-        }
-        Object fromObj = body.get("from_user_id");
-        if (fromObj == null || StringUtils.isBlank(String.valueOf(fromObj))) {
-            return Result.error("400", "缺少参数from_user_id");
-        }
-        int updated = chatMessageMapper.updateMessageStatusToRead(String.valueOf(account.getId()), String.valueOf(fromObj));
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("updated", updated);
-        return Result.success(resp);
+        return Result.success(object);
     }
 
-    /**
-     * 双向历史消息
-     */
-    @GetMapping("/chat/history")
-    public Result getChatHistory(@RequestParam String uid1,
-                                 @RequestParam String uid2) {
-        List<ChatMessage> list = chatMessageMapper.selectList(
-                new LambdaQueryWrapper<ChatMessage>()
-                        .eq(ChatMessage::getFromUid, uid1).eq(ChatMessage::getToUid, uid2)
-                        .or()
-                        .eq(ChatMessage::getFromUid, uid2).eq(ChatMessage::getToUid, uid1)
-                        .orderByAsc(ChatMessage::getId)
-        );
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("messages", list);
-        resp.put("next_cursor", list.isEmpty() ? null : list.get(list.size() - 1).getId());
-        return Result.success(resp);
+    @GetMapping
+    public Result findAll() {
+        return Result.success(chatService.list());
     }
-    /**
-     * 获取与指定好友的最后一条消息
-     */
-    @GetMapping("/chat/last")
-    public Result getLast(@RequestParam String uid) {
-        Account account = TokenUtils.getCurrentUser();
-        if (account == null || account.getId() == null) {
-            return Result.error("401", "未登录");
+
+    @GetMapping("/{id}")
+    public Result findOne(@PathVariable Integer id) {
+        return Result.success(chatService.getById(id));
+    }
+
+    @GetMapping("/page")
+    public Result findPage(@RequestParam Integer pageNum,
+                           @RequestParam Integer pageSize,
+                           @RequestParam(defaultValue = "") String keyword) {
+
+        LambdaQueryWrapper<Chat> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByDesc(Chat::getId);
+
+        if (StrUtil.isNotBlank(keyword)) {
+            queryWrapper.like(Chat::getText, keyword);
         }
-        String me = String.valueOf(account.getId());
-        List<ChatMessage> list = chatMessageMapper.selectList(
-                new LambdaQueryWrapper<ChatMessage>()
-                        .and(w -> w.eq(ChatMessage::getFromUid, me).eq(ChatMessage::getToUid, uid)
-                                .or().eq(ChatMessage::getFromUid, uid).eq(ChatMessage::getToUid, me))
-                        .orderByDesc(ChatMessage::getId)
-                        .last("limit 1")
-        );
-        ChatMessage msg = list.isEmpty() ? null : list.get(0);
-        return Result.success(Map.of("message", msg));
+
+        return Result.success(chatService.page(new Page<>(pageNum, pageSize), queryWrapper));
     }
+
 }
+
