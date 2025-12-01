@@ -109,4 +109,21 @@
 
     </dependencies>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>3.5.0</version> <!-- 对应Spring Boot版本 -->
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal> <!-- 关键：重新打包为可执行JAR -->
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

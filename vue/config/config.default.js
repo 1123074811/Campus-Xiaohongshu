@@ -6,4 +6,4 @@ const ip = '127.0.0.1'
 const port= '9090'
 const serverHost = 'http://'+ip+':'+port // 接口服务器地址 举例:http://127.0.0.1:9090
 
-export { projectName, serverHost }
+export { projectName, serverHost, ip}

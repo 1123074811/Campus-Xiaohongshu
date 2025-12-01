@@ -2,7 +2,7 @@
 import {ref, onBeforeUnmount, nextTick} from 'vue'
 import {useRouter, useRoute} from 'vue-router'
 import request from '../../utils/request'
-import {serverHost} from '../../../config/config.default'
+import {ip, serverHost} from '../../../config/config.default'
 import {ElMessage} from 'element-plus'
 import {ArrowLeft, ChatRound, UploadFilled, Picture, Position} from '@element-plus/icons-vue'
 
@@ -81,7 +81,7 @@ const loadMessage = (fromUserId, toUserId) => {
 
 const init = () => {
   const userId = account.value.id
-  const socketUrl = "ws://localhost:9090/chatServer/" + userId;
+  const socketUrl = "ws://"+ip+":9090/chatServer/" + userId;
 
   // 开启一个websocket服务
   socket = new WebSocket(socketUrl)

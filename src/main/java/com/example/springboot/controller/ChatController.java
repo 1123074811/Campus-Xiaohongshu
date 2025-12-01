@@ -106,6 +106,10 @@ public class ChatController {
         return Result.success(chatList);
     }
 
+    /**
+     * 获取用户列表
+     * @return
+     */
     @GetMapping("/user")
     public Result users() {
         Account account = TokenUtils.getCurrentUser();
