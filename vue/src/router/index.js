@@ -247,19 +247,15 @@ router.beforeEach((to, from, next) => {
   }
   if (to.path === '/') {
     if (account.role) {
-      // 现在是只有角色为管理员才访问后台
-      // 如果想设置其他角色登录后也默认访问后台，可以用下面的判断条件
-      // account.role === 'ROLE_ADMIN' || account.role === 'ROLE_UNIT'
+      // 已登录用户根据角色跳转到对应首页
       if (account.role === 'ROLE_ADMIN') {
         next('/back/home')
       } else {
         next('/front/home')
       }
     } else {
-      // 现在是只有登录以后才可以访问首页
-      next('/login')
-      // 如果想不登录就可以直接访问首页的话，直接用下面的跳转/front/home即可
-      // next('/front/home')
+      // 未登录用户直接访问前台首页
+      next('/front/home')
     }
   } else {
     next()

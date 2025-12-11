@@ -201,8 +201,21 @@ const register = () => {
               </el-button>
             </el-form-item>
 
-            <div class="login-link">
-              已有账号？<a @click="router.push('/login')" class="link">立即登录</a>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div class="back-to-home">
+                <el-button
+                    type="text"
+                    size="large"
+                    @click="router.push('/front/home')"
+                    class="back-button"
+                >
+                  ← 返回首页
+                </el-button>
+              </div>
+
+              <div class="login-link">
+                已有账号？<a @click="router.push('/login')" class="link">立即登录</a>
+              </div>
             </div>
           </el-form>
         </div>
@@ -407,6 +420,25 @@ const register = () => {
   font-size: 16px;
   color: #666;
   margin: 0 0 30px 0;
+}
+
+.back-to-home {
+  display: flex;
+  justify-content: flex-start;
+  
+  .back-button {
+    font-size: 14px;
+    color: #4084d9;
+    padding: 0;
+    margin: 0;
+    height: auto;
+    line-height: normal;
+    
+    &:hover {
+      color: #3a76c4;
+      background-color: transparent;
+    }
+  }
 }
 
 .register-form {

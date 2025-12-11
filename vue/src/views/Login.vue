@@ -176,9 +176,21 @@ const login = () => {
                 登录
               </el-button>
             </el-form-item>
+            <div style="display: flex; justify-content: space-between;">
+              <div class="back-to-home">
+                <el-button
+                    type="text"
+                    size="large"
+                    @click="router.push('/front/home')"
+                    class="back-button"
+                >
+                  ← 返回首页
+                </el-button>
+              </div>
 
-            <div class="register-link">
-              还没有账号？<a @click="router.push('/register')" class="link">立即注册</a>
+              <div class="register-link">
+                还没有账号？<a @click="router.push('/register')" class="link">立即注册</a>
+              </div>
             </div>
           </el-form>
         </div>
@@ -372,6 +384,24 @@ const login = () => {
   font-weight: 600;
   color: #333;
   margin: 0 0 8px 0;
+}
+
+.back-to-home {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 20px;
+
+  .back-button {
+    font-size: 14px;
+    color: #4084d9;
+    padding: 0;
+    margin: 0;
+
+    &:hover {
+      color: #3a76c4;
+      background-color: transparent;
+    }
+  }
 }
 
 .login-subtitle {

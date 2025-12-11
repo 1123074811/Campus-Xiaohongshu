@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.springboot.common.Result;
+import com.example.springboot.config.interceptor.AuthAccess;
 import com.example.springboot.entity.Type;
 import com.example.springboot.service.ITypeService;
 import jakarta.annotation.Resource;
@@ -39,6 +40,7 @@ public class TypeController {
     }
 
     @GetMapping
+    @AuthAccess
     public Result findAll() {
         return Result.success(typeService.list());
     }

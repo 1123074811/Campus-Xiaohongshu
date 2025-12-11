@@ -5,6 +5,7 @@ import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.springboot.common.Result;
+import com.example.springboot.config.interceptor.AuthAccess;
 import com.example.springboot.entity.*;
 import com.example.springboot.service.IBlogService;
 import com.example.springboot.service.ICollectService;
@@ -53,6 +54,7 @@ public class UserController {
     }
 
     @GetMapping
+    @AuthAccess
     public Result findAll() {
         return Result.success(userService.list());
     }

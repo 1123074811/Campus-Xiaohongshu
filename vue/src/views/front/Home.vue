@@ -249,6 +249,10 @@ const cancelReply = () => {
 };
 
 const collect = (id) => {
+  if (!account.value.id) {
+    ElMessage.warning("请登录后操作");
+    return;
+  }
   const data = {
     itemId: id,
   }
@@ -268,6 +272,10 @@ const collect = (id) => {
 };
 
 const like = (id) => {
+  if (!account.value.id) {
+    ElMessage.warning("请登录后操作");
+    return;
+  }
   const data = {
     itemId: id,
   }
@@ -289,6 +297,10 @@ const like = (id) => {
 const isFollowed = ref(false)
 
 const checkFollow = (id) => {
+  if (!account.value.id) {
+    isFollowed.value = false;
+    return;
+  }
   request.get("/follow/checkFollow/" + id).then(res => {
     if (res.code === '200') {
       isFollowed.value = true
@@ -299,6 +311,10 @@ const checkFollow = (id) => {
 };
 
 const follow = (id) => {
+  if (!account.value.id) {
+    ElMessage.warning("请登录后操作");
+    return;
+  }
   request.post("/follow", {
     itemId: id
   }).then(res => {
