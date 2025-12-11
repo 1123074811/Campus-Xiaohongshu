@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.springboot.common.Result;
+import com.example.springboot.config.interceptor.AuthAccess;
 import com.example.springboot.entity.Comment;
 import com.example.springboot.entity.User;
 import com.example.springboot.entity.Word;
@@ -78,6 +79,7 @@ public class CommentController {
 
 
     @GetMapping("/tree/{itemId}")
+    @AuthAccess
     public Result findTree(@PathVariable Integer itemId) {
         //首先查询出来所有用户信息，存为map
         Map<Integer, User> map = userService.list().stream().collect(Collectors.toMap(User::getId, u -> u));

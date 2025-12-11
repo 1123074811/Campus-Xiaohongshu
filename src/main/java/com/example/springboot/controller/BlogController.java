@@ -8,6 +8,7 @@ import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.springboot.common.Result;
+import com.example.springboot.config.interceptor.AuthAccess;
 import com.example.springboot.entity.*;
 import com.example.springboot.service.IBlogService;
 import com.example.springboot.service.ICollectService;
@@ -119,6 +120,7 @@ public class BlogController {
     }
 
     @GetMapping("/front/page")
+    @AuthAccess
     public Result findFrontPage(@RequestParam Integer pageNum,
                            @RequestParam Integer pageSize,
                            @RequestParam Integer typeId,
@@ -140,7 +142,13 @@ public class BlogController {
         //拿到所有点赞信息
         List<Like> likes = likeService.list();
 
-        Account account = TokenUtils.getCurrentUser();
+        // 获取当前用户，如果没有登录则为null
+        Account account = null;
+        try {
+            account = TokenUtils.getCurrentUser();
+        } catch (Exception e) {
+            // 忽略异常，未登录状态下继续执行
+        }
 
         Page<Blog> page = blogService.page(new Page<>(pageNum, pageSize), queryWrapper);
         for (Blog blog : page.getRecords()){
@@ -148,28 +156,32 @@ public class BlogController {
             //1.这个博客被收藏的次数
             //2.这博客是否被当前用户收藏
             int collectCount = 0;
+            boolean isCollected = false;
             for (Collect collect : collects) {
                 //首先判断这个收藏信息是否和当前博客匹配，如果是，说明被收藏一次，则collectCount加1
                 if (Objects.equals(collect.getItemId(), blog.getId())){  //Integer类型的比较：Objects.equals()
                     collectCount++;
                     //如果执行到这里，判断这个博客是否被当前用户收藏了
-                    if (Objects.equals(collect.getUserId(), account.getId())){
-                        blog.setIsCollected(true);
+                    if (account != null && Objects.equals(collect.getUserId(), account.getId())){
+                        isCollected = true;
                     }
                 }
             }
             blog.setCollectCount(collectCount);
+            blog.setIsCollected(isCollected);
 
             int likeCount = 0;
+            boolean isLiked = false;
             for (Like like : likes) {
                 if (Objects.equals(like.getItemId(), blog.getId())){
                     likeCount++;
-                    if (Objects.equals(like.getUserId(), account.getId())){
-                        blog.setIsLiked(true);
+                    if (account != null && Objects.equals(like.getUserId(), account.getId())){
+                        isLiked = true;
                     }
                 }
             }
             blog.setLikeCount(likeCount);
+            blog.setIsLiked(isLiked);
         }
 
         return Result.success(page);
