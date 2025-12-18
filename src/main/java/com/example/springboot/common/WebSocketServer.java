@@ -62,6 +62,22 @@ public class WebSocketServer {
         log.info("服务端收到用户userId={}的消息:{}", userId, message);
         JSONObject obj = JSONUtil.parseObj(message);
 
+        String messageType = obj.getStr("messageType");
+
+        // 处理普通聊天消息
+        if ("chat".equals(messageType) || messageType == null) {
+            handleChatMessage(obj);
+        }
+        // 处理WebRTC信令消息
+        else if ("webrtc".equals(messageType)) {
+            handleWebRTCMessage(obj);
+        }
+    }
+
+    /**
+     * 处理普通聊天消息
+     */
+    private void handleChatMessage(JSONObject obj) {
         String text = obj.getStr("text");
         String type = obj.getStr("type");
         String time = obj.getStr("time");
@@ -83,6 +99,29 @@ public class WebSocketServer {
             log.info("发送给用户userId={}，消息：{}", toUserId, jsonObject.toString());
         } else {
             log.info("发送失败，未找到用户userId={}的session", toUserId);
+        }
+    }
+
+    /**
+     * 处理WebRTC信令消息
+     */
+    private void handleWebRTCMessage(JSONObject obj) {
+        Integer fromUserId = obj.getInt("fromUserId");
+        Integer toUserId = obj.getInt("toUserId");
+        JSONObject data = obj.getJSONObject("data");
+
+        Session toSession = sessionMap.get(toUserId);
+        if (toSession != null) {
+            JSONObject signalMessage = new JSONObject();
+            signalMessage.set("messageType", "webrtc");
+            signalMessage.set("fromUserId", fromUserId);
+            signalMessage.set("toUserId", toUserId);
+            signalMessage.set("data", data);
+
+            sendMessage(toSession, signalMessage.toString());
+            log.info("转发WebRTC信令给用户userId={}，信令类型：{}", toUserId, data.getStr("type"));
+        } else {
+            log.info("WebRTC信令发送失败，未找到用户userId={}的session", toUserId);
         }
     }
 

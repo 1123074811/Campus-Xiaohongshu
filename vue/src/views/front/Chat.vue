@@ -3,8 +3,8 @@ import {ref, onBeforeUnmount, nextTick} from 'vue'
 import {useRouter, useRoute} from 'vue-router'
 import request from '../../utils/request'
 import {ip, serverHost} from '../../../config/config.default'
-import {ElMessage} from 'element-plus'
-import {ArrowLeft, ChatRound, UploadFilled, Picture, Position} from '@element-plus/icons-vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {ChatRound, UploadFilled, Picture, Position, Microphone, MuteNotification, Phone, Close, VideoCamera, VideoCameraFilled} from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -17,6 +17,39 @@ const messages = ref([])
 const text = ref('')
 const userId = ref(route.query.userId)
 const messagesContainer = ref(null)
+const localVideoRef = ref(null)
+const remoteVideoRef = ref(null)
+
+// WebRTC 通话相关状态
+const isInCall = ref(false)
+const isCallInitiator = ref(false)
+const isMuted = ref(false)
+const isVideoOff = ref(false)
+const callDuration = ref(0)
+const callTimer = ref(null)
+const incomingCall = ref(null)
+const showIncomingCallDialog = ref(false)
+const callStatus = ref('') // 'calling', 'ringing', 'connected', 'ended'
+const callStartTime = ref(null) // 通话开始时间
+const callType = ref('audio') // 'audio' 或 'video'
+const showVideoCall = ref(false) // 是否显示视频通话界面
+
+// WebRTC 相关对象
+let localStream = null
+let remoteStream = null
+let peerConnection = null
+let localAudio = null
+let remoteAudio = null
+let localVideo = null
+let remoteVideo = null
+
+// WebRTC 配置
+const rtcConfiguration = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ]
+}
 
 const loadUser = () => {
   request.get('/chat/user').then(res => {
@@ -131,6 +164,10 @@ const init = () => {
           })
         }
       }
+    }
+    // WebRTC 信令处理
+    else if (data.messageType === 'webrtc') {
+      handleWebRTCSignaling(data)
     }
   }
 
@@ -285,6 +322,463 @@ const handleKeydown = (e) => {
     sendMessage()
   }
 }
+
+// WebRTC 通话功能
+const initializeMediaElements = (isVideo = false) => {
+  if (!localAudio) {
+    localAudio = document.createElement('audio')
+    localAudio.muted = true // 本地音频静音避免回音
+  }
+  if (!remoteAudio) {
+    remoteAudio = document.createElement('audio')
+    remoteAudio.autoplay = true
+    document.body.appendChild(remoteAudio)
+  }
+
+  if (isVideo) {
+    if (!localVideo) {
+      localVideo = document.createElement('video')
+      localVideo.muted = true
+      localVideo.autoplay = true
+      localVideo.playsInline = true
+    }
+    if (!remoteVideo) {
+      remoteVideo = document.createElement('video')
+      remoteVideo.autoplay = true
+      remoteVideo.playsInline = true
+    }
+  }
+}
+
+const startCall = async (isVideo = false) => {
+  if (!chatUser.value.id) {
+    ElMessage.warning('请选择通话对象')
+    return
+  }
+
+  if (!chatUser.value.online) {
+    ElMessage.warning('对方不在线，无法发起通话')
+    return
+  }
+
+  try {
+    callType.value = isVideo ? 'video' : 'audio'
+    initializeMediaElements(isVideo)
+
+    // 获取用户媒体流
+    const constraints = isVideo
+        ? { audio: true, video: true }
+        : { audio: true }
+
+    localStream = await navigator.mediaDevices.getUserMedia(constraints)
+
+    if (isVideo) {
+      showVideoCall.value = true
+      // 等待DOM更新后绑定视频流
+      nextTick(() => {
+        if (localVideoRef.value) {
+          localVideoRef.value.srcObject = localStream
+        }
+      })
+    } else {
+      localAudio.srcObject = localStream
+    }
+
+    // 创建 RTCPeerConnection
+    peerConnection = new RTCPeerConnection(rtcConfiguration)
+
+    // 添加本地流到连接
+    localStream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, localStream)
+    })
+
+    // 处理远程流
+    peerConnection.ontrack = (event) => {
+      remoteStream = event.streams[0]
+      if (isVideo) {
+        nextTick(() => {
+          if (remoteVideoRef.value) {
+            remoteVideoRef.value.srcObject = remoteStream
+          }
+        })
+      } else {
+        remoteAudio.srcObject = remoteStream
+      }
+    }
+
+    // 处理 ICE 候选
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendWebRTCMessage({
+          type: 'ice-candidate',
+          candidate: event.candidate
+        })
+      }
+    }
+
+    // 创建 offer
+    const offer = await peerConnection.createOffer()
+    await peerConnection.setLocalDescription(offer)
+
+    // 发送通话邀请
+    sendWebRTCMessage({
+      type: 'call-offer',
+      offer: offer,
+      callType: callType.value
+    })
+
+    isInCall.value = true
+    isCallInitiator.value = true
+    callStatus.value = 'calling'
+    // 不在这里开始计时，等对方接听后再开始
+
+    ElMessage.success(`正在发起${isVideo ? '视频' : '语音'}通话...`)
+  } catch (error) {
+    console.error('发起通话失败:', error)
+    ElMessage.error(`发起通话失败，请检查${isVideo ? '摄像头和麦克风' : '麦克风'}权限`)
+  }
+}
+
+const answerCall = async () => {
+  try {
+    const isVideo = callType.value === 'video'
+    initializeMediaElements(isVideo)
+
+    // 获取用户媒体流
+    const constraints = isVideo
+        ? { audio: true, video: true }
+        : { audio: true }
+
+    localStream = await navigator.mediaDevices.getUserMedia(constraints)
+
+    if (isVideo) {
+      showVideoCall.value = true
+      // 等待DOM更新后绑定视频流
+      nextTick(() => {
+        if (localVideoRef.value) {
+          localVideoRef.value.srcObject = localStream
+        }
+      })
+    } else {
+      localAudio.srcObject = localStream
+    }
+
+    // 创建 RTCPeerConnection
+    peerConnection = new RTCPeerConnection(rtcConfiguration)
+
+    // 添加本地流到连接
+    localStream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, localStream)
+    })
+
+    // 处理远程流
+    peerConnection.ontrack = (event) => {
+      remoteStream = event.streams[0]
+      if (isVideo) {
+        remoteVideo.srcObject = remoteStream
+      } else {
+        remoteAudio.srcObject = remoteStream
+      }
+    }
+
+    // 处理 ICE 候选
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendWebRTCMessage({
+          type: 'ice-candidate',
+          candidate: event.candidate
+        })
+      }
+    }
+
+    // 处理远程流
+    peerConnection.ontrack = (event) => {
+      remoteStream = event.streams[0]
+      if (isVideo) {
+        nextTick(() => {
+          if (remoteVideoRef.value) {
+            remoteVideoRef.value.srcObject = remoteStream
+          }
+        })
+      } else {
+        remoteAudio.srcObject = remoteStream
+      }
+    }
+
+    // 处理 ICE 候选
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendWebRTCMessage({
+          type: 'ice-candidate',
+          candidate: event.candidate
+        })
+      }
+    }
+
+    // 设置远程描述
+    await peerConnection.setRemoteDescription(incomingCall.value.offer)
+
+    // 创建 answer
+    const answer = await peerConnection.createAnswer()
+    await peerConnection.setLocalDescription(answer)
+
+    // 发送应答
+    sendWebRTCMessage({
+      type: 'call-answer',
+      answer: answer
+    })
+
+    isInCall.value = true
+    isCallInitiator.value = false
+    callStatus.value = 'connected'
+    showIncomingCallDialog.value = false
+    startCallTimer()
+
+    ElMessage.success('通话已接通')
+  } catch (error) {
+    console.error('接听通话失败:', error)
+    ElMessage.error(`接听通话失败，请检查${callType.value === 'video' ? '摄像头和麦克风' : '麦克风'}权限`)
+  }
+}
+
+const rejectCall = () => {
+  // 发送拒绝信令给发起通话的用户
+  if (incomingCall.value) {
+    const message = {
+      messageType: 'webrtc',
+      fromUserId: account.value.id,
+      toUserId: chatUser.value.id, // 发送给当前聊天用户（发起通话的用户）
+      data: {
+        type: 'call-reject'
+      }
+    }
+    console.log('发送拒绝信令给用户:', chatUser.value.id)
+    socket.send(JSON.stringify(message))
+  }
+
+  showIncomingCallDialog.value = false
+  incomingCall.value = null
+}
+
+const endCall = () => {
+  // 保存通话记录
+  saveCallRecord()
+
+  // 发送结束通话信号
+  if (isInCall.value) {
+    sendWebRTCMessage({
+      type: 'call-end'
+    })
+  }
+
+  // 清理资源
+  cleanupCall()
+  ElMessage.info('通话已结束')
+}
+
+const cleanupCall = () => {
+  // 停止本地流
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop())
+    localStream = null
+  }
+
+  // 关闭 peer connection
+  if (peerConnection) {
+    peerConnection.close()
+    peerConnection = null
+  }
+
+  // 清理媒体元素
+  if (localAudio) {
+    localAudio.srcObject = null
+  }
+  if (remoteAudio) {
+    remoteAudio.srcObject = null
+  }
+  if (localVideo) {
+    localVideo.srcObject = null
+  }
+  if (remoteVideo) {
+    remoteVideo.srcObject = null
+  }
+
+  // 重置状态
+  isInCall.value = false
+  isCallInitiator.value = false
+  isMuted.value = false
+  isVideoOff.value = false
+  showIncomingCallDialog.value = false
+  showVideoCall.value = false
+  incomingCall.value = null
+  callStatus.value = 'ended'
+  callType.value = 'audio'
+
+  // 停止计时器
+  stopCallTimer()
+
+  // 重置通话相关数据
+  callDuration.value = 0
+  callStartTime.value = null
+}
+
+const toggleMute = () => {
+  if (localStream) {
+    const audioTrack = localStream.getAudioTracks()[0]
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled
+      isMuted.value = !audioTrack.enabled
+    }
+  }
+}
+
+const toggleVideo = () => {
+  if (localStream && callType.value === 'video') {
+    const videoTrack = localStream.getVideoTracks()[0]
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled
+      isVideoOff.value = !videoTrack.enabled
+    }
+  }
+}
+
+const startCallTimer = () => {
+  callDuration.value = 0
+  callStartTime.value = new Date()
+  callTimer.value = setInterval(() => {
+    callDuration.value++
+  }, 1000)
+}
+
+const stopCallTimer = () => {
+  if (callTimer.value) {
+    clearInterval(callTimer.value)
+    callTimer.value = null
+  }
+}
+
+const formatCallDuration = (seconds) => {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+}
+
+const saveCallRecord = () => {
+  // 只有成功建立连接的通话才保存记录
+  if (callStatus.value === 'connected' && callDuration.value > 0) {
+    const callEndTime = new Date()
+    const durationText = formatCallDuration(callDuration.value)
+    const callTypeText = callType.value === 'video' ? '视频' : '语音'
+
+    const callRecord = {
+      text: `${callTypeText}通话时间：${durationText}`,
+      type: callType.value === 'video' ? '视频通话记录' : '通话记录',
+      time: callEndTime.toLocaleString('zh-cn'),
+      fromUserId: account.value.id,
+      toUserId: chatUser.value.id,
+      isRead: false
+    }
+
+    // 保存到数据库
+    saveMessage(callRecord)
+
+    // 添加到本地消息列表显示
+    createMessage(callRecord)
+
+    console.log('保存通话记录:', callTypeText, durationText)
+  }
+}
+
+const sendWebRTCMessage = (data) => {
+  const message = {
+    messageType: 'webrtc',
+    fromUserId: account.value.id,
+    toUserId: chatUser.value.id,
+    data: data
+  }
+  console.log('发送WebRTC信令:', data.type, 'to user:', chatUser.value.id)
+  socket.send(JSON.stringify(message))
+}
+
+const handleWebRTCSignaling = async (message) => {
+  const { data, fromUserId } = message
+
+  console.log('收到WebRTC信令:', data.type, 'from user:', fromUserId)
+
+  // 只处理当前聊天用户的信令，或者处理任何用户的来电邀请
+  if (fromUserId !== chatUser.value.id && data.type !== 'call-offer') {
+    console.log('忽略信令，不是当前聊天用户')
+    return
+  }
+
+  try {
+    switch (data.type) {
+      case 'call-offer':
+        // 收到通话邀请 - 需要处理任何用户的来电
+        console.log('收到通话邀请，来自用户:', fromUserId, '通话类型:', data.callType)
+
+        // 如果当前正在通话中，拒绝新的来电
+        if (isInCall.value) {
+          sendWebRTCMessage({
+            type: 'call-reject'
+          })
+          return
+        }
+
+        // 设置通话类型
+        callType.value = data.callType || 'audio'
+
+        // 找到发起通话的用户信息
+        const callerUser = users.value.find(user => user.id === fromUserId)
+        if (callerUser) {
+          // 切换到发起通话的用户
+          changeUser(callerUser)
+          incomingCall.value = data
+          callStatus.value = 'ringing'
+          showIncomingCallDialog.value = true
+        }
+        break
+
+      case 'call-answer':
+        // 收到通话应答
+        console.log('收到通话应答')
+        if (peerConnection && isCallInitiator.value) {
+          await peerConnection.setRemoteDescription(data.answer)
+          // 发起方收到应答后开始计时
+          callStatus.value = 'connected'
+          startCallTimer()
+          ElMessage.success('通话已接通')
+        }
+        break
+
+      case 'ice-candidate':
+        // 收到 ICE 候选
+        console.log('收到ICE候选')
+        if (peerConnection) {
+          await peerConnection.addIceCandidate(data.candidate)
+        }
+        break
+
+      case 'call-reject':
+        // 通话被拒绝
+        console.log('通话被拒绝')
+        ElMessage.warning('对方拒绝了通话')
+        cleanupCall()
+        break
+
+      case 'call-end':
+        // 对方结束通话
+        console.log('对方结束通话')
+        // 保存通话记录
+        saveCallRecord()
+        ElMessage.info('对方结束了通话')
+        cleanupCall()
+        break
+    }
+  } catch (error) {
+    console.error('处理WebRTC信令失败:', error)
+  }
+}
 </script>
 
 <template>
@@ -333,6 +827,71 @@ const handleKeydown = (e) => {
         <div class="chat-header">
           <div class="user-info">
             <span class="user-name">{{ chatUser.nickname }}</span>
+            <span v-if="chatUser.online" class="online-status">在线</span>
+          </div>
+          <div class="call-controls">
+            <template v-if="!isInCall">
+              <el-button
+                  type="primary"
+                  :icon="Phone"
+                  size="small"
+                  @click="startCall(false)"
+                  :disabled="!chatUser.online"
+                  class="call-btn"
+              >
+                语音通话
+              </el-button>
+              <el-button
+                  type="success"
+                  :icon="VideoCamera"
+                  size="small"
+                  @click="startCall(true)"
+                  :disabled="!chatUser.online"
+                  class="call-btn"
+              >
+                视频通话
+              </el-button>
+            </template>
+            <div v-else class="in-call-controls">
+              <span class="call-duration">
+                {{ callStatus === 'connected' ? formatCallDuration(callDuration) :
+                  callStatus === 'calling' ? '呼叫中...' :
+                      callStatus === 'ringing' ? '响铃中...' : '00:00' }}
+              </span>
+              <span class="call-type-indicator">
+                {{ callType === 'video' ? '视频通话' : '语音通话' }}
+              </span>
+              <template v-if="callStatus === 'connected'">
+                <el-button
+                    :type="isMuted ? 'danger' : 'default'"
+                    :icon="isMuted ? MuteNotification : Microphone"
+                    size="small"
+                    @click="toggleMute"
+                    class="control-btn"
+                >
+                  {{ isMuted ? '取消静音' : '静音' }}
+                </el-button>
+                <el-button
+                    v-if="callType === 'video'"
+                    :type="isVideoOff ? 'danger' : 'default'"
+                    :icon="isVideoOff ? VideoCamera : VideoCameraFilled"
+                    size="small"
+                    @click="toggleVideo"
+                    class="control-btn"
+                >
+                  {{ isVideoOff ? '开启摄像头' : '关闭摄像头' }}
+                </el-button>
+              </template>
+              <el-button
+                  type="danger"
+                  :icon="Close"
+                  size="small"
+                  @click="endCall"
+                  class="end-call-btn"
+              >
+                结束通话
+              </el-button>
+            </div>
           </div>
         </div>
 
@@ -357,6 +916,18 @@ const handleKeydown = (e) => {
                   class="message-bubble"
                   :class="{ 'bubble-self': message.fromUserId === account.id, 'bubble-other': message.fromUserId !== account.id }"
               >{{ message.text }}
+              </div>
+
+              <div
+                  v-else-if="message.type === '通话记录' || message.type === '视频通话记录'"
+                  class="message-call-record"
+                  :class="{ 'call-record-self': message.fromUserId === account.id }"
+              >
+                <el-icon class="call-record-icon">
+                  <VideoCamera v-if="message.type === '视频通话记录'"/>
+                  <Phone v-else/>
+                </el-icon>
+                <span class="call-record-text">{{ message.text }}</span>
               </div>
 
               <div
@@ -479,6 +1050,126 @@ const handleKeydown = (e) => {
         <p>从左侧列表选择一位用户开始对话</p>
       </div>
     </div>
+
+    <!-- 来电弹窗 -->
+    <el-dialog
+        v-model="showIncomingCallDialog"
+        title="来电"
+        width="400px"
+        :close-on-click-modal="false"
+        :close-on-press-escape="false"
+        :show-close="false"
+        center
+        class="incoming-call-dialog"
+    >
+      <div class="incoming-call-content">
+        <div class="caller-info">
+          <img :src="chatUser.avatarUrl" alt="头像" class="caller-avatar">
+          <h3>{{ chatUser.nickname }}</h3>
+          <p>邀请您进行{{ callType === 'video' ? '视频' : '语音' }}通话</p>
+        </div>
+        <div class="call-actions">
+          <el-button
+              type="danger"
+              :icon="Close"
+              size="large"
+              @click="rejectCall"
+              class="reject-btn"
+          >
+            拒绝
+          </el-button>
+          <el-button
+              type="success"
+              :icon="callType === 'video' ? VideoCamera : Phone"
+              size="large"
+              @click="answerCall"
+              class="answer-btn"
+          >
+            接听
+          </el-button>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- 视频通话界面 -->
+    <el-dialog
+        v-model="showVideoCall"
+        title="视频通话"
+        width="80%"
+        :close-on-click-modal="false"
+        :close-on-press-escape="false"
+        :show-close="false"
+        center
+        class="video-call-dialog"
+    >
+      <div class="video-call-container">
+        <div class="video-main">
+          <!-- 远程视频 -->
+          <div class="remote-video-container">
+            <video
+                ref="remoteVideoRef"
+                class="remote-video"
+                autoplay
+                playsinline
+            ></video>
+            <div v-if="!remoteStream" class="video-placeholder">
+              <el-icon :size="64"><VideoCamera/></el-icon>
+              <p>等待对方开启摄像头...</p>
+            </div>
+          </div>
+
+          <!-- 本地视频 -->
+          <div class="local-video-container">
+            <video
+                ref="localVideoRef"
+                class="local-video"
+                autoplay
+                playsinline
+                muted
+            ></video>
+            <div v-if="isVideoOff" class="video-off-overlay">
+              <el-icon :size="32"><VideoCamera/></el-icon>
+              <p>摄像头已关闭</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 视频通话控制栏 -->
+        <div class="video-call-controls">
+          <div class="call-info">
+            <span class="caller-name">{{ chatUser.nickname }}</span>
+            <span class="call-duration">{{ formatCallDuration(callDuration) }}</span>
+          </div>
+
+          <div class="control-buttons">
+            <el-button
+                :type="isMuted ? 'danger' : 'default'"
+                :icon="isMuted ? MuteNotification : Microphone"
+                size="large"
+                @click="toggleMute"
+                class="video-control-btn"
+                circle
+            />
+            <el-button
+                :type="isVideoOff ? 'danger' : 'default'"
+                :icon="isVideoOff ? VideoCamera : VideoCameraFilled"
+                size="large"
+                @click="toggleVideo"
+                class="video-control-btn"
+                circle
+            />
+            <el-button
+                type="danger"
+                :icon="Close"
+                size="large"
+                @click="endCall"
+                class="video-control-btn end-call"
+                circle
+            />
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -643,6 +1334,79 @@ const handleKeydown = (e) => {
   background-color: #fff;
 }
 
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.online-status {
+  font-size: 12px;
+  color: #52c41a;
+  background-color: #f6ffed;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #b7eb8f;
+}
+
+.call-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.call-btn {
+  border-radius: 20px;
+  padding: 8px 16px;
+  margin-right: 8px;
+}
+
+.call-btn:last-child {
+  margin-right: 0;
+}
+
+.in-call-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background-color: #f0f7ff;
+  border-radius: 20px;
+  border: 1px solid #91d5ff;
+}
+
+.call-duration {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1890ff;
+  min-width: 50px;
+}
+
+.call-type-indicator {
+  font-size: 12px;
+  color: #666;
+  background-color: #f5f5f5;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.control-btn {
+  border-radius: 16px;
+  padding: 6px 12px;
+  margin: 0 4px;
+}
+
+.end-call-btn {
+  border-radius: 16px;
+  padding: 6px 12px;
+}
+
 .messages-container {
   flex: 1;
   overflow-y: auto;
@@ -772,6 +1536,34 @@ const handleKeydown = (e) => {
   color: #999;
   margin-top: 4px;
   padding: 0 4px;
+}
+
+.message-call-record {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+  max-width: 200px;
+}
+
+.message-call-record.call-record-self {
+  background-color: #ecfdf5;
+  border-color: #bbf7d0;
+  color: #059669;
+}
+
+.call-record-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.call-record-text {
+  font-weight: 500;
 }
 
 .input-container {
@@ -939,5 +1731,254 @@ const handleKeydown = (e) => {
 .users-list::-webkit-scrollbar-track,
 .messages-container::-webkit-scrollbar-track {
   background-color: transparent;
+}
+
+/* 来电弹窗样式 */
+.incoming-call-dialog :deep(.el-dialog) {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.incoming-call-dialog :deep(.el-dialog__header) {
+  background-color: #1890ff;
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.incoming-call-dialog :deep(.el-dialog__title) {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.incoming-call-content {
+  padding: 20px;
+  text-align: center;
+}
+
+.caller-info {
+  margin-bottom: 30px;
+}
+
+.caller-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.caller-info h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.caller-info p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.call-actions {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.reject-btn,
+.answer-btn {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  font-size: 24px;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.reject-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(245, 34, 45, 0.3);
+}
+
+.answer-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(82, 196, 26, 0.3);
+}
+
+/* 视频通话界面样式 */
+.video-call-dialog :deep(.el-dialog) {
+  border-radius: 16px;
+  overflow: hidden;
+  max-width: 1000px;
+}
+
+.video-call-dialog :deep(.el-dialog__header) {
+  background-color: #1890ff;
+  color: white;
+  padding: 15px 20px;
+}
+
+.video-call-dialog :deep(.el-dialog__title) {
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.video-call-dialog :deep(.el-dialog__body) {
+  padding: 0;
+}
+
+.video-call-container {
+  position: relative;
+  background-color: #000;
+  min-height: 500px;
+}
+
+.video-main {
+  position: relative;
+  width: 100%;
+  height: 500px;
+}
+
+.remote-video-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remote-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.local-video-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 200px;
+  height: 150px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background-color: #2a2a2a;
+}
+
+.local-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  text-align: center;
+}
+
+.video-placeholder .el-icon {
+  margin-bottom: 16px;
+  color: #666;
+}
+
+.video-placeholder p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.video-off-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.video-off-overlay .el-icon {
+  margin-bottom: 8px;
+}
+
+.video-off-overlay p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.video-call-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.call-info {
+  display: flex;
+  flex-direction: column;
+  color: white;
+}
+
+.caller-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.call-info .call-duration {
+  font-size: 14px;
+  color: #ccc;
+  min-width: auto;
+}
+
+.control-buttons {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.video-control-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  font-size: 20px;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.video-control-btn:hover {
+  transform: scale(1.1);
+}
+
+.video-control-btn.end-call {
+  background-color: #ff4d4f;
+  color: white;
+}
+
+.video-control-btn.end-call:hover {
+  background-color: #ff7875;
+  box-shadow: 0 6px 16px rgba(255, 77, 79, 0.4);
 }
 </style>
