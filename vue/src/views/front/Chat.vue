@@ -166,9 +166,27 @@ const sendMessage = () => {
 }
 
 const sendImgMessage = (res) => {
+  // 从上传返回的结果中获取URL
+  const imgUrl = typeof res === 'string' ? res : (res.data || res)
   const message = {
-    text: res,
+    text: imgUrl,
     type: '图片',
+    time: new Date().toLocaleString('zh-cn'),
+    fromUserId: account.value.id,
+    toUserId: chatUser.value.id,
+    isRead: false
+  }
+  socket.send(JSON.stringify(message))
+  createMessage(message)
+  saveMessage(message)
+}
+
+const sendFileMessage = (res) => {
+  // 从上传返回的结果中获取URL
+  const fileUrl = typeof res === 'string' ? res : (res.data || res)
+  const message = {
+    text: fileUrl,
+    type: '文件',
     time: new Date().toLocaleString('zh-cn'),
     fromUserId: account.value.id,
     toUserId: chatUser.value.id,
@@ -183,6 +201,51 @@ const saveMessage = (message) => {
   request.post('/chat', message).then(res => {
     clear()
   })
+}
+
+const getFileNameFromUrl = (url) => {
+  // 从URL中提取文件名
+  if (!url) return '未知文件'
+
+  try {
+    // 如果是OSS URL，提取最后一个斜杠后的部分
+    const fileName = url.split('/').pop()
+
+    // 检查是否是编码格式：UUID_编码后的原始文件名
+    if (fileName.includes('_')) {
+      const parts = fileName.split('_')
+      if (parts.length >= 2) {
+        // 第一部分是UUID，从第二部分开始是编码后的原始文件名
+        const encodedOriginalName = parts.slice(1).join('_')
+        try {
+          // 尝试URL解码，获取原始中文文件名
+          return decodeURIComponent(encodedOriginalName)
+        } catch (e) {
+          // 解码失败，返回编码后的文件名
+          return encodedOriginalName
+        }
+      }
+    }
+
+    // 如果不是编码格式，尝试直接解码（兼容旧格式）
+    if (fileName.includes('.')) {
+      try {
+        return decodeURIComponent(fileName)
+      } catch (e) {
+        return fileName
+      }
+    }
+
+    return fileName || '未知文件'
+  } catch (e) {
+    return '未知文件'
+  }
+}
+
+const downloadFile = (fileUrl) => {
+  if (!fileUrl) return
+  // 直接打开链接，让浏览器处理下载
+  window.open(fileUrl, '_blank')
 }
 
 const createMessage = (message) => {
@@ -297,6 +360,23 @@ const handleKeydown = (e) => {
               </div>
 
               <div
+                  v-else-if="message.type === '文件'"
+                  class="message-file-wrapper"
+                  :class="{ 'file-self': message.fromUserId === account.id }"
+              >
+                <el-button
+                    link
+                    type="primary"
+                    @click="downloadFile(message.text)"
+                    class="file-link"
+                    :class="{ 'file-link-self': message.fromUserId === account.id }"
+                >
+                  <el-icon class="file-icon"><UploadFilled/></el-icon>
+                  <span class="file-name">{{ getFileNameFromUrl(message.text) }}</span>
+                </el-button>
+              </div>
+
+              <div
                   v-else-if="message.type === '图片'"
                   class="message-image-wrapper"
                   :class="{ 'image-self': message.fromUserId === account.id }"
@@ -336,6 +416,7 @@ const handleKeydown = (e) => {
                   :action="`${serverHost}/web/upload`"
                   :on-success="sendImgMessage"
                   :show-file-list="false"
+                  accept="image/*"
               >
                 <el-button
                     type="default"
@@ -344,6 +425,20 @@ const handleKeydown = (e) => {
                     class="upload-btn"
                 >
                   图片
+                </el-button>
+              </el-upload>
+              <el-upload
+                  :action="`${serverHost}/web/upload`"
+                  :on-success="sendFileMessage"
+                  :show-file-list="false"
+              >
+                <el-button
+                    type="default"
+                    :icon="UploadFilled"
+                    size="small"
+                    class="upload-btn"
+                >
+                  文件
                 </el-button>
               </el-upload>
             </div>
@@ -714,6 +809,63 @@ const handleKeydown = (e) => {
   color: #1890ff;
   border-color: #1890ff;
   background-color: #f0f7ff;
+}
+
+.message-file-wrapper {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  border: 1px solid #f0f0f0;
+}
+
+.message-file-wrapper.file-self {
+  background-color: #1890ff;
+  border-color: #1890ff;
+  border-top-right-radius: 4px;
+}
+
+.message-file-wrapper:not(.file-self) {
+  border-top-left-radius: 4px;
+}
+
+.file-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #1890ff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+  border: none;
+  background: none;
+  height: auto;
+  font-size: 14px;
+}
+
+.message-file-wrapper.file-self .file-link,
+.file-link-self {
+  color: #fff;
+}
+
+.file-link:hover {
+  opacity: 0.8;
+}
+
+.file-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.file-name {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
 }
 
 .message-textarea :deep(.el-textarea__inner) {

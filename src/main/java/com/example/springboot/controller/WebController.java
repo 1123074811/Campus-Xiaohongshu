@@ -153,15 +153,17 @@ public class WebController {
     private AliOssUtil aliOssUtil;
 
     /**
-     * 文件上传接口 - 改为OSS存储
+     * 文件上传接口 - 改为OSS存储，在文件名中编码原始文件名
      */
     @PostMapping("/upload")
     public String upload(@RequestParam MultipartFile file) throws IOException {
         String originalFilename = file.getOriginalFilename();
-        String type = FileUtil.extName(originalFilename);
 
-        // 生成唯一文件名
-        String fileUUID = IdUtil.fastSimpleUUID() + StrUtil.DOT + type;
+        // 对原始文件名进行URL编码，处理中文字符
+        String encodedOriginalName = URLEncoder.encode(originalFilename, "UTF-8");
+
+        // 生成包含原始文件名的唯一文件名：UUID_编码后的原始文件名
+        String fileUUID = IdUtil.fastSimpleUUID() + "_" + encodedOriginalName;
 
         // 上传到OSS
         String url = aliOssUtil.upload(file.getBytes(), fileUUID);
