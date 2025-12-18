@@ -217,7 +217,8 @@ onBeforeUnmount(() => {
 })
 
 const handleKeydown = (e) => {
-  if (e.ctrlKey && e.key === 'Enter') {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
     sendMessage()
   }
 }
@@ -362,7 +363,7 @@ const handleKeydown = (e) => {
           <div class="send-actions">
             <span class="hint">
               <el-icon size="14"><Position/></el-icon>
-              按 Ctrl + Enter 发送
+              按 Enter 发送，Shift + Enter 换行
             </span>
             <el-button
                 type="primary"
