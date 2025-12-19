@@ -4,7 +4,7 @@ import {useRouter, useRoute} from 'vue-router'
 import request from '../../utils/request'
 import {ip, serverHost} from '../../../config/config.default'
 import {ElMessage, ElMessageBox} from 'element-plus'
-import {ChatRound, UploadFilled, Picture, Position, Microphone, MuteNotification, Phone, Close, VideoCamera, VideoCameraFilled} from '@element-plus/icons-vue'
+import {ChatRound, UploadFilled, Picture, Position, Microphone, MuteNotification, Phone, Close, VideoCamera, VideoCameraFilled, Sunny} from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -33,6 +33,42 @@ const callStatus = ref('') // 'calling', 'ringing', 'connected', 'ended'
 const callStartTime = ref(null) // 通话开始时间
 const callType = ref('audio') // 'audio' 或 'video'
 const showVideoCall = ref(false) // 是否显示视频通话界面
+
+// 表情功能相关状态
+const showEmojiPanel = ref(false)
+const emojiCategories = ref([
+  {
+    name: '笑脸',
+    key: 'smileys',
+    emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥']
+  },
+  {
+    name: '手势',
+    key: 'gestures',
+    emojis: ['👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👋', '🤚', '🖐️', '✋', '🖖', '👏', '🙌', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄']
+  },
+  {
+    name: '心情',
+    key: 'emotions',
+    emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐']
+  },
+  {
+    name: '动物',
+    key: 'animals',
+    emojis: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦦', '🦥', '🐁', '🐀', '🐿️']
+  },
+  {
+    name: '食物',
+    key: 'food',
+    emojis: ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕']
+  },
+  {
+    name: '活动',
+    key: 'activities',
+    emojis: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️‍♀️', '🏋️', '🏋️‍♂️', '🤼‍♀️', '🤼', '🤼‍♂️', '🤸‍♀️', '🤸', '🤸‍♂️', '⛹️‍♀️', '⛹️', '⛹️‍♂️', '🤺', '🤾‍♀️', '🤾', '🤾‍♂️', '🏌️‍♀️', '🏌️', '🏌️‍♂️', '🏇', '🧘‍♀️', '🧘', '🧘‍♂️', '🏄‍♀️', '🏄', '🏄‍♂️', '🏊‍♀️', '🏊', '🏊‍♂️', '🤽‍♀️', '🤽', '🤽‍♂️', '🚣‍♀️', '🚣', '🚣‍♂️', '🧗‍♀️', '🧗', '🧗‍♂️', '🚵‍♀️', '🚵', '🚵‍♂️', '🚴‍♀️', '🚴', '🚴‍♂️']
+  }
+])
+const activeEmojiCategory = ref('smileys')
 
 // WebRTC 相关对象
 let localStream = null
@@ -200,6 +236,7 @@ const sendMessage = () => {
   createMessage(message)
   saveMessage(message)
   text.value = ''
+  showEmojiPanel.value = false // 发送消息后关闭表情面板
 }
 
 const sendImgMessage = (res) => {
@@ -314,6 +351,9 @@ onBeforeUnmount(() => {
     }
     socket.close()
   }
+
+  // 清理表情面板事件监听器
+  document.removeEventListener('click', handleClickOutside)
 })
 
 const handleKeydown = (e) => {
@@ -322,6 +362,36 @@ const handleKeydown = (e) => {
     sendMessage()
   }
 }
+
+// 表情功能
+const toggleEmojiPanel = () => {
+  showEmojiPanel.value = !showEmojiPanel.value
+}
+
+const selectEmoji = (emoji) => {
+  text.value += emoji
+  // 可以选择是否在选择表情后关闭面板
+  // showEmojiPanel.value = false
+}
+
+const switchEmojiCategory = (categoryKey) => {
+  activeEmojiCategory.value = categoryKey
+}
+
+// 点击外部关闭表情面板
+const handleClickOutside = (event) => {
+  const emojiPanel = document.querySelector('.emoji-panel')
+  const emojiButton = document.querySelector('.emoji-button')
+
+  if (emojiPanel && emojiButton &&
+      !emojiPanel.contains(event.target) &&
+      !emojiButton.contains(event.target)) {
+    showEmojiPanel.value = false
+  }
+}
+
+// 监听点击事件
+document.addEventListener('click', handleClickOutside)
 
 // WebRTC 通话功能
 const initializeMediaElements = (isVideo = false) => {
@@ -1014,16 +1084,53 @@ const handleWebRTCSignaling = async (message) => {
               </el-upload>
             </div>
 
-            <el-input
-                type="textarea"
-                v-model="text"
-                :rows="3"
-                placeholder="请输入消息内容..."
-                resize="none"
-                @keydown="handleKeydown"
-                class="message-textarea"
-                @focus="clear"
-            />
+            <div class="textarea-wrapper">
+              <div class="textarea-container">
+                <el-input
+                    type="textarea"
+                    v-model="text"
+                    :rows="1"
+                    placeholder="请输入消息内容..."
+                    resize="none"
+                    @keydown="handleKeydown"
+                    class="message-textarea"
+                    @focus="clear"
+                />
+                <el-button
+                    class="emoji-button"
+                    size="small"
+                    @click="toggleEmojiPanel"
+                    type="text"
+                >
+                  😊
+                </el-button>
+              </div>
+
+              <!-- 表情面板 -->
+              <div v-if="showEmojiPanel" class="emoji-panel">
+                <div class="emoji-categories">
+                  <div
+                      v-for="category in emojiCategories"
+                      :key="category.key"
+                      class="emoji-category-tab"
+                      :class="{ 'active': activeEmojiCategory === category.key }"
+                      @click="switchEmojiCategory(category.key)"
+                  >
+                    {{ category.name }}
+                  </div>
+                </div>
+                <div class="emoji-list">
+                  <span
+                      v-for="(emoji, index) in emojiCategories.find(c => c.key === activeEmojiCategory)?.emojis"
+                      :key="index"
+                      class="emoji-item"
+                      @click="selectEmoji(emoji)"
+                  >
+                    {{ emoji }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="send-actions">
@@ -1579,6 +1686,16 @@ const handleWebRTCSignaling = async (message) => {
   margin-bottom: 10px;
 }
 
+.textarea-wrapper {
+  position: relative;
+}
+
+.textarea-container {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
 .editor-toolbar {
   display: flex;
   gap: 8px;
@@ -1660,10 +1777,14 @@ const handleWebRTCSignaling = async (message) => {
   font-size: 14px;
 }
 
+.message-textarea {
+  flex: 1;
+}
+
 .message-textarea :deep(.el-textarea__inner) {
   border-radius: 8px;
   border-color: #e8e8e8;
-  padding: 12px;
+  padding: 12px 40px 12px 12px; /* 右侧留出空间给表情按钮 */
   transition: all 0.3s;
   font-size: 14px;
   line-height: 1.6;
@@ -1672,6 +1793,125 @@ const handleWebRTCSignaling = async (message) => {
 .message-textarea :deep(.el-textarea__inner):focus {
   border-color: #1890ff;
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.emoji-button {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 10;
+  transition: all 0.3s ease;
+  border: none;
+  background: transparent;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emoji-button:hover {
+  background-color: #f0f7ff;
+  transform: scale(1.1);
+}
+
+.emoji-button:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.emoji-panel {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  width: 500px;
+  height: 320px;
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+.emoji-categories {
+  display: flex;
+  border-bottom: 1px solid #f0f0f0;
+  background-color: #fafafa;
+  border-radius: 12px 12px 0 0;
+  flex-wrap: wrap;
+}
+
+.emoji-category-tab {
+  padding: 8px 10px;
+  font-size: 11px;
+  color: #666;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  border-bottom: 2px solid transparent;
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+
+.emoji-category-tab:hover {
+  color: #1890ff;
+  background-color: #f0f7ff;
+}
+
+.emoji-category-tab.active {
+  color: #1890ff;
+  border-bottom-color: #1890ff;
+  background-color: #f0f7ff;
+}
+
+.emoji-list {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 10px;
+  align-content: start;
+}
+
+.emoji-item {
+  font-size: 24px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+}
+
+.emoji-item:hover {
+  background-color: #f0f7ff;
+  transform: scale(1.2);
+}
+
+.emoji-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.emoji-list::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.emoji-list::-webkit-scrollbar-track {
+  background-color: transparent;
 }
 
 .send-actions {
