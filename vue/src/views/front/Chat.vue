@@ -239,9 +239,33 @@ const sendMessage = () => {
   showEmojiPanel.value = false // 发送消息后关闭表情面板
 }
 
+// 从上传响应中提取URL的通用方法
+const extractUrlFromResponse = (res) => {
+  // 如果是字符串，直接返回
+  if (typeof res === 'string') {
+    return res
+  }
+  // 如果是对象，尝试多种方式提取URL
+  if (typeof res === 'object' && res !== null) {
+    // 优先使用 response 属性（el-upload 可能会包装响应）
+    if (res.response) {
+      return typeof res.response === 'string' ? res.response : res.response.data || res.response
+    }
+    // 尝试 data 属性
+    if (res.data) {
+      return res.data
+    }
+    // 尝试 url 属性
+    if (res.url) {
+      return res.url
+    }
+  }
+  return res
+}
+
 const sendImgMessage = (res) => {
   // 从上传返回的结果中获取URL
-  const imgUrl = typeof res === 'string' ? res : (res.data || res)
+  const imgUrl = extractUrlFromResponse(res)
   const message = {
     text: imgUrl,
     type: '图片',
@@ -257,7 +281,7 @@ const sendImgMessage = (res) => {
 
 const sendFileMessage = (res) => {
   // 从上传返回的结果中获取URL
-  const fileUrl = typeof res === 'string' ? res : (res.data || res)
+  const fileUrl = extractUrlFromResponse(res)
   const message = {
     text: fileUrl,
     type: '文件',
@@ -2082,7 +2106,7 @@ const handleWebRTCSignaling = async (message) => {
 .video-main {
   position: relative;
   width: 100%;
-  height: 500px;
+  height: 750px;
 }
 
 .remote-video-container {
