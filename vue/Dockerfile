@@ -1,4 +1,4 @@
-FROM nginx
+FROM docker.1ms.run/library/nginx:latest
 # 复制编译后的静态文件到Nginx的默认站点目录
 COPY ./dist /usr/share/nginx/html/
 # 复制自定义Nginx配置（可选，若无则用默认配置）
