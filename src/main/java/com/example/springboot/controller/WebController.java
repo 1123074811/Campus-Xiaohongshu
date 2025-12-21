@@ -156,19 +156,58 @@ public class WebController {
      * 文件上传接口 - 改为OSS存储，在文件名中编码原始文件名
      */
     @PostMapping("/upload")
-    public String upload(@RequestParam MultipartFile file) throws IOException {
-        String originalFilename = file.getOriginalFilename();
+    public Result upload(@RequestParam MultipartFile file) {
+        try {
+            // 检查文件是否为空
+            if (file == null || file.isEmpty()) {
+                return Result.error(Constants.CODE_400, "文件不能为空");
+            }
+            
+            String originalFilename = file.getOriginalFilename();
+            String type = FileUtil.extName(originalFilename);
 
-        // 对原始文件名进行URL编码，处理中文字符
-        String encodedOriginalName = URLEncoder.encode(originalFilename, "UTF-8");
+            // 生成唯一文件名
+            String fileUUID = IdUtil.fastSimpleUUID() + StrUtil.DOT + type;
 
-        // 生成包含原始文件名的唯一文件名：UUID_编码后的原始文件名
-        String fileUUID = IdUtil.fastSimpleUUID() + "_" + encodedOriginalName;
+            // 上传到OSS
+            String url = aliOssUtil.upload(file.getBytes(), fileUUID);
+            
+            return Result.success(url);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(Constants.CODE_500, "文件上传失败：" + e.getMessage());
+        }
+    }
 
-        // 上传到OSS
-        String url = aliOssUtil.upload(file.getBytes(), fileUUID);
+    @PostMapping("/upload/chat")
+    public Result uploadChat(@RequestParam MultipartFile file) {
+        try {
+            // 检查文件是否为空
+            if (file == null || file.isEmpty()) {
+                return Result.error(Constants.CODE_400, "文件不能为空");
+            }
+            
+            String originalFilename = file.getOriginalFilename();
+            
+            // 检查文件名是否为空
+            if (originalFilename == null || originalFilename.trim().isEmpty()) {
+                originalFilename = "未知文件";
+            }
 
-        return url;
+            // 对原始文件名进行URL编码，处理中文字符
+            String encodedOriginalName = URLEncoder.encode(originalFilename, "UTF-8");
+
+            // 生成包含原始文件名的唯一文件名：UUID_编码后的原始文件名
+            String fileUUID = IdUtil.fastSimpleUUID() + "_" + encodedOriginalName;
+
+            // 上传到OSS
+            String url = aliOssUtil.upload(file.getBytes(), fileUUID);
+            
+            return Result.success(url);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error(Constants.CODE_500, "文件上传失败：" + e.getMessage());
+        }
     }
 
     /**

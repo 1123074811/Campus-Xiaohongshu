@@ -1,5 +1,5 @@
 <script setup>
-import {ref, onBeforeUnmount, nextTick} from 'vue'
+import {ref, onBeforeUnmount, nextTick, computed} from 'vue'
 import {useRouter, useRoute} from 'vue-router'
 import request from '../../utils/request'
 import {ip, serverHost} from '../../../config/config.default'
@@ -12,6 +12,14 @@ const route = useRoute()
 const account = ref(localStorage.getItem('account') ? JSON.parse(localStorage.getItem('account')) : {})
 const chatUser = ref({})
 const users = ref([])
+
+// 上传组件需要的headers，包含token
+const uploadHeaders = computed(() => {
+  const currentAccount = localStorage.getItem('account') ? JSON.parse(localStorage.getItem('account')) : null
+  return currentAccount && currentAccount.token ? {
+    'token': currentAccount.token
+  } : {}
+})
 const userIds = ref([])
 const messages = ref([])
 const text = ref('')
@@ -240,8 +248,38 @@ const sendMessage = () => {
 }
 
 const sendImgMessage = (res) => {
+  // 添加调试信息
+  console.log('图片上传响应:', res)
+  
   // 从上传返回的结果中获取URL
-  const imgUrl = typeof res === 'string' ? res : (res.data || res)
+  let imgUrl
+  if (typeof res === 'string') {
+    imgUrl = res
+  } else if (res && res.data && typeof res.data === 'string') {
+    // 直接返回URL字符串的情况
+    imgUrl = res.data
+  } else if (res && res.data && res.data.data) {
+    // Result对象格式：{code: 200, msg: "success", data: "url"}
+    imgUrl = res.data.data
+  } else if (res && res.code === 200 && res.data) {
+    // 直接的Result对象
+    imgUrl = res.data
+  } else if (res && typeof res === 'object') {
+    // 处理可能的其他响应格式
+    imgUrl = res.url || res.path || res
+  } else {
+    imgUrl = res
+  }
+  
+  console.log('提取的图片URL:', imgUrl)
+  
+  // 检查URL是否有效
+  if (!imgUrl || typeof imgUrl !== 'string') {
+    console.error('无效的图片URL:', imgUrl)
+    ElMessage.error('图片上传失败，请重试')
+    return
+  }
+  
   const message = {
     text: imgUrl,
     type: '图片',
@@ -256,8 +294,40 @@ const sendImgMessage = (res) => {
 }
 
 const sendFileMessage = (res) => {
+  // 添加详细的调试信息
+  console.log('文件上传响应:', res)
+  console.log('响应类型:', typeof res)
+  
   // 从上传返回的结果中获取URL
-  const fileUrl = typeof res === 'string' ? res : (res.data || res)
+  let fileUrl
+  if (typeof res === 'string') {
+    fileUrl = res
+  } else if (res && res.data && typeof res.data === 'string') {
+    // 直接返回URL字符串的情况
+    fileUrl = res.data
+  } else if (res && res.data && res.data.data) {
+    // Result对象格式：{code: 200, msg: "success", data: "url"}
+    fileUrl = res.data.data
+  } else if (res && res.code === 200 && res.data) {
+    // 直接的Result对象
+    fileUrl = res.data
+  } else if (res && typeof res === 'object') {
+    // 处理可能的其他响应格式
+    fileUrl = res.url || res.path || res
+  } else {
+    fileUrl = res
+  }
+  
+  console.log('提取的文件URL:', fileUrl)
+  console.log('解析出的文件名:', getFileNameFromUrl(fileUrl))
+  
+  // 检查URL是否有效
+  if (!fileUrl || typeof fileUrl !== 'string') {
+    console.error('无效的文件URL:', fileUrl)
+    ElMessage.error('文件上传失败，请重试')
+    return
+  }
+  
   const message = {
     text: fileUrl,
     type: '文件',
@@ -277,13 +347,38 @@ const saveMessage = (message) => {
   })
 }
 
+const handleUploadError = (error, file, fileList) => {
+  console.error('文件上传失败:', error)
+  
+  // 尝试解析错误信息
+  let errorMessage = '文件上传失败'
+  if (error && error.response) {
+    try {
+      const errorData = JSON.parse(error.response)
+      if (errorData.msg) {
+        errorMessage = errorData.msg
+      }
+    } catch (e) {
+      // 解析失败，使用默认错误信息
+    }
+  }
+  
+  ElMessage.error(errorMessage)
+}
+
 const getFileNameFromUrl = (url) => {
   // 从URL中提取文件名
   if (!url) return '未知文件'
-
+  
+  // 确保url是字符串类型
+  const urlString = String(url)
+  
   try {
     // 如果是OSS URL，提取最后一个斜杠后的部分
-    const fileName = url.split('/').pop()
+    const fileName = urlString.split('/').pop()
+    
+    // 如果文件名为空，返回未知文件
+    if (!fileName) return '未知文件'
 
     // 检查是否是编码格式：UUID_编码后的原始文件名
     if (fileName.includes('_')) {
@@ -293,10 +388,11 @@ const getFileNameFromUrl = (url) => {
         const encodedOriginalName = parts.slice(1).join('_')
         try {
           // 尝试URL解码，获取原始中文文件名
-          return decodeURIComponent(encodedOriginalName)
+          const decodedName = decodeURIComponent(encodedOriginalName)
+          return decodedName || '未知文件'
         } catch (e) {
           // 解码失败，返回编码后的文件名
-          return encodedOriginalName
+          return encodedOriginalName || '未知文件'
         }
       }
     }
@@ -304,7 +400,8 @@ const getFileNameFromUrl = (url) => {
     // 如果不是编码格式，尝试直接解码（兼容旧格式）
     if (fileName.includes('.')) {
       try {
-        return decodeURIComponent(fileName)
+        const decodedName = decodeURIComponent(fileName)
+        return decodedName || fileName
       } catch (e) {
         return fileName
       }
@@ -312,6 +409,7 @@ const getFileNameFromUrl = (url) => {
 
     return fileName || '未知文件'
   } catch (e) {
+    console.error('解析文件名失败:', e, '传入的URL:', url)
     return '未知文件'
   }
 }
@@ -1056,8 +1154,10 @@ const handleWebRTCSignaling = async (message) => {
               <el-upload
                   :action="`${serverHost}/web/upload`"
                   :on-success="sendImgMessage"
+                  :on-error="handleUploadError"
                   :show-file-list="false"
                   accept="image/*"
+                  :headers="uploadHeaders"
               >
                 <el-button
                     type="default"
@@ -1069,9 +1169,11 @@ const handleWebRTCSignaling = async (message) => {
                 </el-button>
               </el-upload>
               <el-upload
-                  :action="`${serverHost}/web/upload`"
+                  :action="`${serverHost}/web/upload/chat`"
                   :on-success="sendFileMessage"
+                  :on-error="handleUploadError"
                   :show-file-list="false"
+                  :headers="uploadHeaders"
               >
                 <el-button
                     type="default"
@@ -2082,7 +2184,7 @@ const handleWebRTCSignaling = async (message) => {
 .video-main {
   position: relative;
   width: 100%;
-  height: 500px;
+  height: 750px;
 }
 
 .remote-video-container {
