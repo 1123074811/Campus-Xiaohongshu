@@ -164,17 +164,23 @@ const handleAvatarUrlUploadSuccess = (res) => {
 <template>
   <div class="content-container">
 
-    <!-- 搜索区域 -->
-    <div class="header-section">
-      <el-input v-model="searchForm.keyword" placeholder="请输入昵称" class="filter-input" :prefix-icon="Search" clearable/>
-      <el-button class="ml-10" plain type="primary" @click="load">搜索</el-button>
-      <el-button plain type="info" @click="reset">重置</el-button>
-    </div>
-
-    <!-- 操作按钮区域 -->
-    <div class="toolbar-section">
-      <el-button plain type="primary" @click="handleAdd" :icon="Plus">新增</el-button>
-      <el-button plain type="danger" @click="confirmBatchDelete" :icon="Delete">批量删除</el-button>
+    <!-- 搜索和操作区域 -->
+    <div class="action-bar">
+      <div class="search-section">
+        <el-input 
+          v-model="searchForm.keyword" 
+          placeholder="请输入昵称" 
+          class="search-input" 
+          :prefix-icon="Search" 
+          clearable
+        />
+        <el-button type="primary" @click="load" :icon="Search">搜索</el-button>
+        <el-button @click="reset">重置</el-button>
+      </div>
+      <div class="toolbar-section">
+        <el-button type="primary" @click="handleAdd" :icon="Plus">新增</el-button>
+        <el-button type="danger" @click="confirmBatchDelete" :icon="Delete">批量删除</el-button>
+      </div>
     </div>
 
     <!-- 表格区域 -->
@@ -257,5 +263,56 @@ const handleAvatarUrlUploadSuccess = (res) => {
 </template>
 
 <style scoped>
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
 
+.search-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-input {
+  width: 280px;
+}
+
+.toolbar-section {
+  display: flex;
+  gap: 12px;
+}
+
+.pagination-section {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .action-bar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .search-section {
+    flex-wrap: wrap;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .toolbar-section {
+    justify-content: flex-start;
+  }
+}
 </style>
