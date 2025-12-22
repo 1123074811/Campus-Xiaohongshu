@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import {User, Lock, SwitchButton, House, UserFilled, Setting, Coffee, ChatDotSquare, Star, CirclePlus, Message, Warning, Promotion, ChatDotRound} from '@element-plus/icons-vue'
+import {User, Lock, SwitchButton, House, UserFilled, Setting, Coffee, ChatDotSquare, Star, CirclePlus, Message, Warning, Promotion, ChatDotRound, Tools} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { projectName } from '../../config/config.default'
 
@@ -172,6 +172,11 @@ const handleUpdateAccount = (updatedAccount) => {
             <template #title>聊天信息管理</template>
           </el-menu-item>
 
+          <el-menu-item index="/back/aiAssistant" v-if="account.role==='ROLE_ADMIN'">
+            <el-icon><Tools /></el-icon>
+            <template #title>AI助手管理</template>
+          </el-menu-item>
+
           <el-sub-menu index="" v-if="account.role==='ROLE_ADMIN'">
             <template #title>
               <el-icon><UserFilled /></el-icon>
@@ -259,6 +264,10 @@ const handleUpdateAccount = (updatedAccount) => {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   z-index: 1000;
 
+  @media (max-width: 768px) {
+    height: 50px;
+  }
+
   .header-left {
     display: flex;
     align-items: center;
@@ -269,6 +278,10 @@ const handleUpdateAccount = (updatedAccount) => {
       display: flex;
       align-items: center;
       justify-content: center;
+
+      @media (max-width: 768px) {
+        height: 50px;
+      }
 
       .logo-image {
         width: 30px;
@@ -282,6 +295,10 @@ const handleUpdateAccount = (updatedAccount) => {
         color: #fff;
         margin: 0;
         white-space: nowrap;
+
+        @media (max-width: 480px) {
+          font-size: 14px;
+        }
       }
     }
   }
@@ -321,6 +338,10 @@ const handleUpdateAccount = (updatedAccount) => {
       .user-name {
         font-size: 14px;
         color: #fff;
+
+        @media (max-width: 480px) {
+          display: none;
+        }
       }
     }
   }
@@ -332,12 +353,23 @@ const handleUpdateAccount = (updatedAccount) => {
   gap: 10px;
   padding: 10px;
   background-color: #f9f9f9;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    padding: 5px;
+    gap: 5px;
+  }
 }
 
 .admin-sidebar {
   min-height: calc(100vh - 80px);
   background-color: #fff;
   box-shadow: 2px 0 8px 0 rgba(29, 35, 41, 0.05);
+
+  @media (max-width: 768px) {
+    min-height: auto;
+    width: 100%;
+  }
 }
 
 .admin-content {
@@ -345,6 +377,10 @@ const handleUpdateAccount = (updatedAccount) => {
   overflow-y: auto;
   background-color: #fff;
   border-radius: 5px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 }
 
 .dropdown-link {

@@ -91,6 +91,22 @@ const routes = [
         }
       },
       {
+        path: 'ai-assistant',
+        name: 'FrontAiAssistant',
+        component: () => import('../views/front/AiAssistant.vue'),
+        meta: {
+          title: 'AI助手'
+        }
+      },
+      {
+        path: 'responsive-demo',
+        name: 'FrontResponsiveDemo',
+        component: () => import('../views/front/ResponsiveDemo.vue'),
+        meta: {
+          title: '响应式设计演示'
+        }
+      },
+      {
         path: 'user',
         name: 'FrontUser',
         component: () => import('../views/front/User.vue'),
@@ -225,7 +241,15 @@ const routes = [
         name: 'BackChat',
         component: () => import('../views/back/Chat.vue'),
         meta: {
-          title: '管理员管理'
+          title: '聊天信息管理'
+        }
+      },
+      {
+        path: 'aiAssistant',
+        name: 'BackAiAssistant',
+        component: () => import('../views/back/AiAssistant.vue'),
+        meta: {
+          title: 'AI助手管理'
         }
       },
       // 后台子路由

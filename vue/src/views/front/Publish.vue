@@ -277,8 +277,16 @@ onMounted(() => {
   padding: 30px 20px;
   flex-direction: column;
 
+  @media (max-width: 768px) {
+    padding: 20px 10px;
+  }
+
   .title {
     font-size: 25px;
+
+    @media (max-width: 480px) {
+      font-size: 20px;
+    }
 
     &::after {
       content: '';
@@ -341,12 +349,34 @@ onMounted(() => {
   height: 280px;
   line-height: 280px;
   text-align: center;
+
+  @media (max-width: 768px) {
+    width: 250px;
+    height: 200px;
+    line-height: 200px;
+  }
+
+  @media (max-width: 480px) {
+    width: 200px;
+    height: 160px;
+    line-height: 160px;
+  }
 }
 
 .img {
   width: 350px;
   height: 280px;
   display: block;
+
+  @media (max-width: 768px) {
+    width: 250px;
+    height: 200px;
+  }
+
+  @media (max-width: 480px) {
+    width: 200px;
+    height: 160px;
+  }
 }
 
 .video-preview {
@@ -355,6 +385,10 @@ onMounted(() => {
   margin: 20px auto;
   display: flex;
   justify-content: center;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+  }
 
   .video-player {
     width: 100%;

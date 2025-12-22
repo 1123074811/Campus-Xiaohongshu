@@ -119,9 +119,17 @@ const save = () => {
 .password-container {
   padding: 20px;
 
+  @media (max-width: 768px) {
+    padding: 10px;
+  }
+
   .password-card {
     max-width: 600px;
     margin: 0 auto;
+
+    @media (max-width: 768px) {
+      max-width: 100%;
+    }
 
     .el-form {
       margin-top: 20px;

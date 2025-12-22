@@ -120,9 +120,17 @@ const collectOptions = [
   justify-content: center;
   padding: 20px;
 
+  @media (max-width: 768px) {
+    padding: 10px;
+  }
+
   .person-card {
     max-width: 600px;
     width: 100%;
+
+    @media (max-width: 768px) {
+      max-width: 100%;
+    }
 
     .card-title {
       text-align: center;
@@ -130,6 +138,10 @@ const collectOptions = [
       margin-bottom: 20px;
       font-size: 22px;
       color: #333;
+
+      @media (max-width: 480px) {
+        font-size: 18px;
+      }
     }
 
     .avatar-container {

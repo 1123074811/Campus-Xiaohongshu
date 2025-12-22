@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { projectName } from '../../config/config.default'
-import { User, Lock, SwitchButton, House, VideoCamera, Bell,PictureRounded, ChatDotRound} from '@element-plus/icons-vue'
+import { User, Lock, SwitchButton, House, VideoCamera, Bell,PictureRounded, ChatDotRound, Service} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 // 路由实例
@@ -41,6 +41,12 @@ const sidebarMenus = ref([
     name: '聊天',
     icon: 'ChatDotRound',
     path: '/front/chat',
+    active: false
+  },
+  {
+    name: 'AI助手',
+    icon: 'Service',
+    path: '/front/ai-assistant',
     active: false
   },
   {
@@ -112,10 +118,10 @@ const clearSearch =()=> {
 </script>
 
 <template>
+  <div>
+    <el-backtop :right="50" :bottom="50" />
 
-  <el-backtop :right="50" :bottom="50" />
-
-  <div class="front-container">
+    <div class="front-container">
     <!-- 顶部导航栏 -->
     <header class="header-nav">
       <div class="header-left-warp">
@@ -140,9 +146,9 @@ const clearSearch =()=> {
         </div>
       </div>
 
-      <div style="display: flex;justify-content: space-around;">
-        <el-input size="large" v-model="keyword" @clear="clearSearch" clearable placeholder="搜索小红书" style="width:400px"></el-input>
-        <el-button size="large" type="danger" @click="search" style="margin-left: 5px">搜索</el-button>
+      <div class="search-wrapper">
+        <el-input size="large" v-model="keyword" @clear="clearSearch" clearable placeholder="搜索小红书" class="search-input"></el-input>
+        <el-button size="large" type="danger" @click="search" class="search-btn">搜索</el-button>
       </div>
 
       <div class="user-warp">
@@ -201,12 +207,13 @@ const clearSearch =()=> {
         <div class="sidebar-nav">
           <div class="sidebar-menu">
             <!-- 主要菜单项 -->
-            <div v-for="menu in sidebarMenus" class="sidebar-menu-item" :class="{ 'active': activeSidebarMenu === menu.path }" @click="switchSidebarMenu(menu)">
+            <div v-for="menu in sidebarMenus" :key="menu.path" class="sidebar-menu-item" :class="{ 'active': activeSidebarMenu === menu.path }" @click="switchSidebarMenu(menu)">
               <div class="menu-icon">
                 <el-icon v-if="menu.icon === 'House'"><House /></el-icon>
                 <el-icon v-else-if="menu.icon === 'VideoCamera'"><VideoCamera /></el-icon>
                 <el-icon v-else-if="menu.icon === 'Bell'"><Bell /></el-icon>
                 <el-icon v-else-if="menu.icon === 'ChatDotRound'"><ChatDotRound /></el-icon>
+                <el-icon v-else-if="menu.icon === 'Service'"><Service /></el-icon>
                 <el-avatar v-else :src="account.avatarUrl" :size="24"></el-avatar>
               </div>
               <span class="menu-text">{{ menu.name }}</span>
@@ -224,6 +231,7 @@ const clearSearch =()=> {
     <footer class="front-footer">
       <p>© {{ new Date().getFullYear() }} {{ projectName }}. 保留所有权利</p>
     </footer>
+  </div>
   </div>
 </template>
 
@@ -254,6 +262,17 @@ $front-font-color: #d54941;
   box-shadow: 0 2px 10px 0 rgba(0, 0, 0, 0.1);
   overflow: visible;
 
+  /* 响应式调整 */
+  @media (max-width: 1024px) {
+    padding: 0 20px;
+  }
+
+  @media (max-width: 768px) {
+    height: 60px;
+    padding: 0 15px;
+    flex-wrap: wrap;
+  }
+
   .header-left-warp {
     display: flex;
     align-items: center;
@@ -264,6 +283,10 @@ $front-font-color: #d54941;
       display: flex;
       align-items: center;
       margin-left: 20px;
+
+      @media (max-width: 768px) {
+        margin-left: 0;
+      }
 
       .logo {
         width: 30px;
@@ -281,6 +304,14 @@ $front-font-color: #d54941;
         font-size: 22px;
         font-weight: 500;
         color: $front-font-color;
+
+        @media (max-width: 768px) {
+          font-size: 18px;
+        }
+
+        @media (max-width: 480px) {
+          display: none;
+        }
       }
 
     }
@@ -288,6 +319,14 @@ $front-font-color: #d54941;
     .header-navs{
       margin-left: 80px;
       height: 100%;
+
+      @media (max-width: 1024px) {
+        margin-left: 40px;
+      }
+
+      @media (max-width: 768px) {
+        display: none;
+      }
 
       .el-menu {
         background-color: $front-back-color !important;
@@ -316,14 +355,56 @@ $front-font-color: #d54941;
 
   }
 
+  .search-wrapper {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 5px;
+
+    @media (max-width: 768px) {
+      width: 100%;
+      order: 3;
+      margin-top: 10px;
+    }
+
+    .search-input {
+      width: 400px;
+
+      @media (max-width: 1024px) {
+        width: 300px;
+      }
+
+      @media (max-width: 768px) {
+        width: 100%;
+      }
+    }
+
+    .search-btn {
+      @media (max-width: 480px) {
+        padding: 8px 12px;
+      }
+    }
+  }
+
   .user-warp {
     display: flex;
     align-items: center;
     margin-right: 20px;
     height: 100%; /* 确保高度与父元素一致 */
 
+    @media (max-width: 768px) {
+      margin-right: 10px;
+    }
+
     .btn-login {
       margin-top: 0;
+
+      @media (max-width: 480px) {
+        .el-button {
+          padding: 8px 12px;
+          font-size: 12px;
+        }
+      }
     }
 
     .user-avatar {
@@ -365,9 +446,34 @@ $front-font-color: #d54941;
   display: flex;
   gap: 30px;
 
+  @media (max-width: 1024px) {
+    gap: 15px;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 0;
+  }
+
   .main-left{
     width: 20%;
     padding: 20px 0;
+
+    @media (max-width: 1024px) {
+      width: 25%;
+    }
+
+    @media (max-width: 768px) {
+      width: 100%;
+      padding: 0;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background-color: #fff;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    }
 
     .sidebar-nav {
       position: sticky;
@@ -376,10 +482,27 @@ $front-font-color: #d54941;
       flex-direction: column;
       height: calc(100vh - 90px);
 
+      @media (max-width: 768px) {
+        position: static;
+        flex-direction: row;
+        height: auto;
+      }
+
       .sidebar-menu {
         flex: 1;
         padding: 0 20px;
         margin-left: 100px;
+
+        @media (max-width: 1024px) {
+          margin-left: 20px;
+        }
+
+        @media (max-width: 768px) {
+          display: flex;
+          justify-content: space-around;
+          margin-left: 0;
+          padding: 10px 5px;
+        }
       }
 
       .sidebar-menu-item {
@@ -393,6 +516,13 @@ $front-font-color: #d54941;
         color: #333;
         font-size: 16px;
         font-weight: 500;
+
+        @media (max-width: 768px) {
+          flex-direction: column;
+          padding: 8px 12px;
+          margin-bottom: 0;
+          font-size: 12px;
+        }
 
         &:hover {
           background-color: #f8f8f8;
@@ -427,6 +557,11 @@ $front-font-color: #d54941;
           flex: 1;
           font-size: 16px;
           font-weight: 500;
+
+          @media (max-width: 768px) {
+            font-size: 10px;
+            margin-top: 4px;
+          }
         }
       }
     }
@@ -434,6 +569,10 @@ $front-font-color: #d54941;
 
   .main-right{
     flex: 1;
+
+    @media (max-width: 768px) {
+      padding-bottom: 70px;
+    }
   }
 
 }

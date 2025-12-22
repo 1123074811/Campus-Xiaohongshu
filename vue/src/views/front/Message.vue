@@ -150,6 +150,10 @@ onMounted(() => {
   margin: 0 auto;
   padding: 20px;
   background-color: #fff;
+
+  @media (max-width: 768px) {
+    padding: 10px;
+  }
 }
 
 .notification-item {
@@ -159,11 +163,21 @@ onMounted(() => {
   border-bottom: 1px solid #f5f5f5;
   gap: 12px;
 
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
+    padding: 12px 0;
+  }
+
   &:hover {
     background-color: #fafafa;
     margin: 0 -20px;
     padding: 16px 20px;
     border-radius: 8px;
+
+    @media (max-width: 768px) {
+      margin: 0 -10px;
+      padding: 12px 10px;
+    }
   }
 }
 
@@ -209,6 +223,12 @@ onMounted(() => {
 .content-thumbnail {
   flex-shrink: 0;
 
+  @media (max-width: 768px) {
+    order: 3;
+    flex-basis: 100%;
+    margin-top: 8px;
+  }
+
   img {
     width: 60px;
     height: 60px;
@@ -237,6 +257,10 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 500;
   transition: all 0.2s ease;
+
+  @media (max-width: 768px) {
+    flex-shrink: 0;
+  }
 
   &:hover {
     background-color: #e01e3c;

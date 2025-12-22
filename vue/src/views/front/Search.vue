@@ -8,6 +8,33 @@ const route = useRoute();
 const router = useRouter();
 import {ElMessage} from "element-plus";
 
+// 响应式列数调整
+const updateColumns = () => {
+  const width = window.innerWidth;
+  if (width < 480) {
+    col.value = 1;
+    blogWidth.value = width - 40;
+  } else if (width < 768) {
+    col.value = 2;
+    blogWidth.value = 200;
+  } else if (width < 1024) {
+    col.value = 3;
+    blogWidth.value = 220;
+  } else if (width < 1280) {
+    col.value = 4;
+    blogWidth.value = 240;
+  } else {
+    col.value = 5;
+    blogWidth.value = 250;
+  }
+  getWaterfallContainerWidth();
+};
+
+// 监听窗口大小变化
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', updateColumns);
+}
+
 // 从路由参数获取初始搜索关键词
 const keyword = ref(route.query.keyword || '')
 
@@ -33,6 +60,7 @@ const loadType = () => {
 
 onMounted(() => {
   loadType()
+  updateColumns()
   getWaterfallContainerWidth()
   loadUsers()
   // 初始化时将路由参数的关键词赋值给搜索表单

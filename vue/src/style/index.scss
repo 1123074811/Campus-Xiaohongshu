@@ -11,6 +11,31 @@ body {
   font-size: 14px;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* 响应式断点变量 */
+:root {
+  --breakpoint-xs: 480px;
+  --breakpoint-sm: 768px;
+  --breakpoint-md: 1024px;
+  --breakpoint-lg: 1280px;
+  --breakpoint-xl: 1920px;
+  
+  /* 响应式间距变量 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* 响应式字体大小 */
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-xxl: 20px;
 }
 
 ul,
@@ -182,4 +207,236 @@ a {
     color: #fff;
   }
 
+}
+
+/* 响应式工具类 */
+.responsive-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+  
+  @media (max-width: 768px) {
+    padding: 0 var(--spacing-sm);
+  }
+  
+  @media (max-width: 480px) {
+    padding: 0 var(--spacing-xs);
+  }
+}
+
+/* 响应式网格系统 */
+.grid {
+  display: grid;
+  gap: var(--spacing-md);
+  
+  @media (max-width: 768px) {
+    gap: var(--spacing-sm);
+  }
+}
+
+.grid-cols-1 { grid-template-columns: repeat(1, 1fr); }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 768px) {
+  .grid-cols-2 { grid-template-columns: 1fr; }
+  .grid-cols-3 { grid-template-columns: 1fr; }
+  .grid-cols-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 480px) {
+  .grid-cols-4 { grid-template-columns: 1fr; }
+}
+
+/* 响应式Flex布局 */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.gap-sm {
+  gap: var(--spacing-sm);
+}
+
+.gap-md {
+  gap: var(--spacing-md);
+}
+
+.gap-lg {
+  gap: var(--spacing-lg);
+}
+
+/* 响应式显示/隐藏 */
+.hidden-mobile {
+  @media (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+.hidden-desktop {
+  @media (min-width: 769px) {
+    display: none !important;
+  }
+}
+
+.show-mobile {
+  display: none;
+  @media (max-width: 768px) {
+    display: block;
+  }
+}
+
+.show-desktop {
+  display: block;
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+/* 响应式文字大小 */
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-md { font-size: var(--font-size-md); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+.text-xxl { font-size: var(--font-size-xxl); }
+
+/* 响应式间距 */
+.p-xs { padding: var(--spacing-xs); }
+.p-sm { padding: var(--spacing-sm); }
+.p-md { padding: var(--spacing-md); }
+.p-lg { padding: var(--spacing-lg); }
+.p-xl { padding: var(--spacing-xl); }
+
+.m-xs { margin: var(--spacing-xs); }
+.m-sm { margin: var(--spacing-sm); }
+.m-md { margin: var(--spacing-md); }
+.m-lg { margin: var(--spacing-lg); }
+.m-xl { margin: var(--spacing-xl); }
+
+/* 响应式宽度 */
+.w-full { width: 100%; }
+.w-auto { width: auto; }
+
+@media (max-width: 768px) {
+  .w-mobile-full { width: 100% !important; }
+}
+
+/* 响应式高度 */
+.h-full { height: 100%; }
+.h-screen { height: 100vh; }
+
+@media (max-width: 768px) {
+  .h-mobile-auto { height: auto !important; }
+}
+
+/* 响应式圆角 */
+.rounded-sm { border-radius: 4px; }
+.rounded-md { border-radius: 8px; }
+.rounded-lg { border-radius: 12px; }
+.rounded-xl { border-radius: 16px; }
+
+/* 响应式阴影 */
+.shadow-sm { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+.shadow-md { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+.shadow-lg { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); }
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  /* 触摸友好的按钮大小 */
+  .el-button {
+    min-height: 44px;
+    padding: 8px 16px;
+  }
+  
+  /* 更大的输入框 */
+  .el-input__inner {
+    min-height: 44px;
+    font-size: 16px; /* 防止iOS缩放 */
+  }
+  
+  /* 更大的点击区域 */
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* 平板优化 */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .tablet-hidden {
+    display: none !important;
+  }
+  
+  .tablet-show {
+    display: block !important;
+  }
+}
+
+/* 桌面端优化 */
+@media (min-width: 1025px) {
+  .desktop-hidden {
+    display: none !important;
+  }
+  
+  .desktop-show {
+    display: block !important;
+  }
+}
+
+/* 高分辨率屏幕优化 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .high-dpi {
+    /* 高分辨率屏幕特定样式 */
+  }
+}
+
+/* 横屏/竖屏适配 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .landscape-compact {
+    /* 横屏紧凑布局 */
+  }
+}
+
+@media (orientation: portrait) {
+  .portrait-only {
+    /* 竖屏专用样式 */
+  }
+}
+
+/* 无障碍优化 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .auto-dark {
+    /* 自动深色模式样式 */
+  }
 }

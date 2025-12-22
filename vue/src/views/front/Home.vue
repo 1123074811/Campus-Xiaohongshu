@@ -8,6 +8,33 @@ const route = useRoute();
 const router = useRouter();
 import {ElMessage} from "element-plus";
 
+// 响应式列数调整
+const updateColumns = () => {
+  const width = window.innerWidth;
+  if (width < 480) {
+    col.value = 1;
+    blogWidth.value = width - 40;
+  } else if (width < 768) {
+    col.value = 2;
+    blogWidth.value = 200;
+  } else if (width < 1024) {
+    col.value = 3;
+    blogWidth.value = 220;
+  } else if (width < 1280) {
+    col.value = 4;
+    blogWidth.value = 240;
+  } else {
+    col.value = 5;
+    blogWidth.value = 250;
+  }
+  getWaterfallContainerWidth();
+};
+
+// 监听窗口大小变化
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', updateColumns);
+}
+
 const types = ref([])
 const loadType = () => {
   request.get('/type').then(res => {
@@ -21,6 +48,7 @@ const loadType = () => {
 
 onMounted(() => {
   loadType()
+  updateColumns()
   getWaterfallContainerWidth()
   loadUsers()
   load(false)
@@ -807,6 +835,11 @@ $front-font-color: #d54941;
   flex-wrap: wrap;
   margin: 20px 0;
 
+  @media (max-width: 768px) {
+    margin: 10px 0;
+    justify-content: center;
+  }
+
   .type-item {
     padding: 10px 20px;
     margin: 5px;
@@ -817,6 +850,17 @@ $front-font-color: #d54941;
     color: #333;
     font-size: 16px;
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+
+    @media (max-width: 768px) {
+      padding: 8px 16px;
+      margin: 3px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 480px) {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
   }
 
   .type-item.active {
@@ -928,6 +972,10 @@ $front-font-color: #d54941;
   overflow: hidden;
   will-change: transform, opacity;
 
+  @media (max-width: 768px) {
+    border-radius: 0;
+  }
+
   .close-button {
     position: absolute;
     top: 15px;
@@ -956,12 +1004,20 @@ $front-font-color: #d54941;
     width: 100%;
     height: 100%;
 
+    @media (max-width: 768px) {
+      flex-direction: column;
+    }
+
     .img-video-container {
       flex: 1;
       background-color: #000;
       display: flex;
       align-items: center;
       justify-content: center;
+
+      @media (max-width: 768px) {
+        max-height: 50vh;
+      }
 
       &.closing-animation {
         flex: 1;
@@ -988,6 +1044,10 @@ $front-font-color: #d54941;
       position: relative;
       background: #fff;
       transition: all 0.5s ease;
+
+      @media (max-width: 768px) {
+        max-height: 50vh;
+      }
 
       &.closing-hide {
         width: 0;
