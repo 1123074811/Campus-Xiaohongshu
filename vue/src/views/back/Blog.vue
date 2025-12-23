@@ -46,6 +46,21 @@ load()
 // 保存
 const save = () => {
   form.value.content = htmlContent.value;
+
+  // 根据上传内容自动设置 category
+  if (form.value.video) {
+    form.value.category = '视频'
+  } else if (imageList.value.length > 0) {
+    form.value.category = '多图'
+    form.value.images = JSON.stringify(imageList.value)
+    // 如果没有封面图，使用第一张图作为封面
+    if (!form.value.img && imageList.value.length > 0) {
+      form.value.img = imageList.value[0]
+    }
+  } else if (form.value.img) {
+    form.value.category = '图片'
+  }
+
   request.post("/blog", form.value).then(res => {
     if (res.code === '200') {
       ElMessage.success("保存成功")
@@ -61,6 +76,7 @@ const save = () => {
 const handleAdd = () => {
   htmlContent.value = "";
   form.value = {}
+  imageList.value = [];
   dialogFormVisible.value = true
 }
 
@@ -68,6 +84,19 @@ const handleAdd = () => {
 const handleEdit = (row) => {
   form.value = JSON.parse(JSON.stringify(row))
   htmlContent.value = form.value.content || '';
+
+  // 加载多图数据
+  imageList.value = []
+  if (form.value.images) {
+    try {
+      const imagesArray = JSON.parse(form.value.images)
+      imageList.value = [...imagesArray]
+    } catch (e) {
+      console.error('解析图片数据失败:', e)
+      imageList.value = []
+    }
+  }
+
   dialogFormVisible.value = true
 }
 
@@ -163,11 +192,63 @@ const confirmBatchDelete = () => {
 
 // 图片上传
 const handleImgUploadSuccess = (res) => {
-  form.value.img = res;
+  console.log('封面图上传成功 - 原始响应:', res)
+  // 检查响应格式
+  if (typeof res === 'string') {
+    form.value.img = res
+  } else if (res && res.data) {
+    form.value.img = res.data
+  } else {
+    console.error('未知的响应格式:', res)
+    ElMessage.error('图片上传响应格式错误')
+    return
+  }
+  console.log('封面图URL:', form.value.img)
 };
+
+// 多图上传
+const imageList = ref([]);
+
+const handleMultiImgUploadSuccess = (res) => {
+  console.log('多图上传成功 - 原始响应:', res)
+
+  let imageUrl = ''
+  // 检查响应格式，兼容 string 和 object 两种格式
+  if (typeof res === 'string') {
+    imageUrl = res
+  } else if (res && res.data) {
+    imageUrl = res.data
+  } else {
+    console.error('未知的响应格式:', res)
+    ElMessage.error('图片上传响应格式错误')
+    return
+  }
+
+  console.log('解析后的图片URL:', imageUrl)
+  imageList.value.push(imageUrl);  // 确保push的是URL字符串
+  form.value.images = JSON.stringify(imageList.value);
+  console.log('当前图片列表:', imageList.value)
+};
+
+const handleRemoveImage = (index) => {
+  imageList.value.splice(index, 1);
+  form.value.images = imageList.value.length > 0 ? JSON.stringify(imageList.value) : '';
+};
+
 // 视频上传
 const handleVideoUploadSuccess = (res) => {
-  form.value.video = res;
+  console.log('视频上传成功 - 原始响应:', res)
+  // 检查响应格式
+  if (typeof res === 'string') {
+    form.value.video = res
+  } else if (res && res.data) {
+    form.value.video = res.data
+  } else {
+    console.error('未知的响应格式:', res)
+    ElMessage.error('视频上传响应格式错误')
+    return
+  }
+  console.log('视频URL:', form.value.video)
 };
 
 const types = ref([])
@@ -191,7 +272,7 @@ loadUsers()
 
 //定义富文本数据
 const htmlContent = ref('');
-const editorRefContent = ref(null);
+const editorRefContent = shallowRef();
 
 //wangEditor 配置
 const editorConfig = {
@@ -244,6 +325,32 @@ const download = (url) => {
   window.open(url)
 }
 
+// 解析图片JSON数组
+const parseImages = (imagesJson) => {
+  if (!imagesJson) return []
+  try {
+    return JSON.parse(imagesJson)
+  } catch (e) {
+    console.error('解析图片数据失败:', e)
+    return []
+  }
+}
+
+// 计算总图片数量（包含封面）
+const getTotalImageCount = (row) => {
+  let count = 1  // 封面图（博客一定有封面）
+
+  // 如果有多图数据，加上多图数量（去重封面）
+  if (row.images) {
+    const imagesArray = parseImages(row.images)
+    // 过滤掉与封面相同的图片，避免重复计数
+    const uniqueImages = imagesArray.filter(img => img !== row.img)
+    count += uniqueImages.length
+  }
+
+  return count
+}
+
 const contentViewVisible = ref(false)
 const currentViewContent = ref('');
 
@@ -260,12 +367,12 @@ const viewContent = (content) => {
     <!-- 搜索和操作区域 -->
     <div class="action-bar">
       <div class="search-section">
-        <el-input 
-          v-model="searchForm.keyword" 
-          placeholder="请输入博客标题" 
-          class="search-input" 
-          :prefix-icon="Search" 
-          clearable
+        <el-input
+            v-model="searchForm.keyword"
+            placeholder="请输入博客标题"
+            class="search-input"
+            :prefix-icon="Search"
+            clearable
         />
         <el-button type="primary" @click="load" :icon="Search">搜索</el-button>
         <el-button @click="reset">重置</el-button>
@@ -293,9 +400,37 @@ const viewContent = (content) => {
           </template>
         </el-table-column>
         <el-table-column prop="time" label="时间" />
-        <el-table-column label="图片" width="120" align="center">
+        <el-table-column label="图片" width="100" align="center">
           <template #default="scope">
-            <el-image style="width: 80px; height: 80px" :src="scope.row.img" :preview-src-list="[scope.row.img]" :preview-teleported="true"></el-image>
+            <!-- 多图堆叠显示 -->
+            <div v-if="scope.row.images" class="image-stack">
+              <el-image
+                  v-for="(img, index) in parseImages(scope.row.images).slice(0, 3)"
+                  :key="index"
+                  :style="{
+                  zIndex: 3 - index,
+                  transform: `translateX(${index * 8}px) rotate(${index * 3}deg)`
+                }"
+                  class="stacked-image"
+                  :src="img"
+                  :preview-src-list="parseImages(scope.row.images)"
+                  :initial-index="index"
+                  :preview-teleported="true"
+                  fit="cover"
+              />
+              <!-- 图片数量标记（包含封面） -->
+              <span class="image-count-badge">{{ getTotalImageCount(scope.row) }}</span>
+            </div>
+            <!-- 单图显示 -->
+            <el-image
+                v-else-if="scope.row.img"
+                style="width: 60px; height: 60px; border-radius: 4px;"
+                :src="scope.row.img"
+                :preview-src-list="[scope.row.img]"
+                :preview-teleported="true"
+                fit="cover"
+            />
+            <span v-else>-</span>
           </template>
         </el-table-column>
 
@@ -369,6 +504,33 @@ const viewContent = (content) => {
             </el-upload>
           </div>
         </el-form-item>
+        <el-form-item label="多图上传">
+          <div class="multi-upload-container">
+            <div class="image-list">
+              <div v-for="(img, index) in imageList" :key="index" class="image-item">
+                <el-image :src="img" fit="cover" class="uploaded-image" :preview-src-list="imageList" :initial-index="index" />
+                <div class="image-overlay">
+                  <el-button type="danger" size="small" circle @click="handleRemoveImage(index)">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </div>
+              </div>
+              <el-upload
+                  :action="`${serverHost}/web/upload`"
+                  :on-success="handleMultiImgUploadSuccess"
+                  :show-file-list="false"
+                  accept="image/*"
+                  class="upload-box"
+              >
+                <div class="upload-trigger">
+                  <el-icon size="30"><Plus /></el-icon>
+                  <div class="upload-text">上传图片</div>
+                </div>
+              </el-upload>
+            </div>
+            <div class="upload-tip">建议图片尺寸：800x600，支持jpg、png格式</div>
+          </div>
+        </el-form-item>
         <el-form-item label="视频">
           <div class="upload-container">
             <el-upload :action="`${serverHost}/web/upload`" :on-success="handleVideoUploadSuccess" :show-file-list="false">
@@ -376,26 +538,28 @@ const viewContent = (content) => {
             </el-upload>
           </div>
         </el-form-item>
-        <el-form-item label="类型" required>
-          <el-radio-group v-model="form.category">
-            <el-radio value="图片">图片</el-radio>
-            <el-radio value="视频">视频</el-radio>
-          </el-radio-group>
+
+        <!-- 显示当前类型（只读） -->
+        <el-form-item label="类型">
+          <el-tag v-if="form.video" type="primary">视频</el-tag>
+          <el-tag v-else-if="imageList.length > 0" type="success">多图</el-tag>
+          <el-tag v-else-if="form.img" type="info">图片</el-tag>
+          <el-tag v-else type="warning">未设置</el-tag>
         </el-form-item>
-        <el-form-item label="详情" required>
+        <el-form-item label="内容" required>
           <div style="border: 1px solid #ccc; z-index: 100;">
-            <!-- 新增工具栏 -->
             <Toolbar
                 style="border-bottom: 1px solid #ccc"
                 :editor="editorRefContent"
                 :defaultConfig="editorConfig"
+                mode="default"
             />
             <Editor
                 style="height: 300px; overflow-y: hidden;"
                 v-model="htmlContent"
                 :defaultConfig="editorConfig"
                 mode="default"
-                @onCreated="(editor) => { editorRefContent.value = editor }"
+                @onCreated="editorRefContent = $event"
             />
           </div>
         </el-form-item>
@@ -442,6 +606,128 @@ const viewContent = (content) => {
   gap: 12px;
 }
 
+.multi-upload-container {
+  width: 100%;
+}
+
+.image-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.image-item {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #dcdfe6;
+}
+
+.uploaded-image {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.image-item:hover .image-overlay {
+  opacity: 1;
+}
+
+.upload-box {
+  width: 120px;
+  height: 120px;
+}
+
+.upload-trigger {
+  width: 120px;
+  height: 120px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.upload-trigger:hover {
+  border-color: #409eff;
+}
+
+.upload-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.5;
+}
+
+/* 表格中的图片堆叠样式 */
+.image-stack {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 60px;
+}
+
+.stacked-image {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 4px;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.stacked-image:hover {
+  transform: translateY(-5px) scale(1.1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  z-index: 10 !important;
+}
+
+.image-count-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 3px 7px;
+  border-radius: 12px;
+  z-index: 5;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+  border: 2px solid #fff;
+  min-width: 20px;
+  text-align: center;
+}
+
 .pagination-section {
   margin-top: 20px;
   display: flex;
@@ -455,15 +741,15 @@ const viewContent = (content) => {
     gap: 12px;
     align-items: stretch;
   }
-  
+
   .search-section {
     flex-wrap: wrap;
   }
-  
+
   .search-input {
     width: 100%;
   }
-  
+
   .toolbar-section {
     justify-content: flex-start;
   }

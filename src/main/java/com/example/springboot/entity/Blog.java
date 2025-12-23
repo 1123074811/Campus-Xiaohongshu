@@ -29,6 +29,8 @@ public class Blog {
 
     private String img;
 
+    private String images;
+
     private String video;
 
     private String category;

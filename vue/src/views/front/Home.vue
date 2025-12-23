@@ -138,12 +138,37 @@ const dialogStyle = ref({})
 const originalPosition = ref({})
 const isClosing = ref(false)
 
+// 多图相关
+const blogImages = ref([])
+const currentImageIndex = ref(0)
+
 const showBlog = (item, event) => {
 
   blog.value = item
   commentItemId.value = item.id
   checkFollow(blog.value.userId)
   loadComment()
+
+  // 加载多图数据
+  blogImages.value = []
+  currentImageIndex.value = 0
+
+  // 优先使用封面图作为第一张
+  if (item.img) {
+    blogImages.value.push(item.img)
+  }
+
+  // 如果有多图数据，添加到数组中（排除封面图重复）
+  if (item.images) {
+    try {
+      const imagesArray = JSON.parse(item.images)
+      // 过滤掉与封面图相同的图片，避免重复
+      const filteredImages = imagesArray.filter(img => img !== item.img)
+      blogImages.value = blogImages.value.concat(filteredImages)
+    } catch (e) {
+      console.error('解析多图数据失败:', e)
+    }
+  }
 
   const clickedElement = event.currentTarget
   const rect = clickedElement.getBoundingClientRect()
@@ -220,6 +245,19 @@ const closeBlog = () => {
     blogVisible.value = false
     isClosing.value = false
   }, 500)
+}
+
+// 图片切换
+const prevImage = () => {
+  if (currentImageIndex.value > 0) {
+    currentImageIndex.value--
+  }
+}
+
+const nextImage = () => {
+  if (currentImageIndex.value < blogImages.value.length - 1) {
+    currentImageIndex.value++
+  }
 }
 
 const account = ref(localStorage.getItem('account') ? JSON.parse(localStorage.getItem('account')) : {})
@@ -445,7 +483,43 @@ const follow = (id) => {
     <div class="custom-dialog-content">
       <div class="img-video-container" :class="{ 'closing-animation': isClosing }">
         <video controls autoplay :src="blog.video" class="video-player" v-if="blog.category==='视频'"></video>
-        <el-image :src="blog.img" class="img" :preview-src-list="[blog.img]" v-else></el-image>
+        <div v-else class="image-carousel">
+          <!-- 图片容器 -->
+          <div class="carousel-main">
+            <el-image
+                :src="blogImages[currentImageIndex]"
+                class="img"
+                :preview-src-list="blogImages"
+                :initial-index="currentImageIndex"
+            ></el-image>
+          </div>
+
+          <!-- 切换按钮 -->
+          <button
+              v-if="blogImages.length > 1 && currentImageIndex > 0"
+              @click.stop="prevImage"
+              class="carousel-btn carousel-btn-prev"
+          >
+            ‹
+          </button>
+          <button
+              v-if="blogImages.length > 1 && currentImageIndex < blogImages.length - 1"
+              @click.stop="nextImage"
+              class="carousel-btn carousel-btn-next"
+          >
+            ›
+          </button>
+
+          <!-- 指示器 -->
+          <div v-if="blogImages.length > 1" class="carousel-indicators">
+            <span
+                v-for="(img, index) in blogImages"
+                :key="index"
+                :class="['indicator', { 'active': index === currentImageIndex }]"
+                @click.stop="currentImageIndex = index"
+            ></span>
+          </div>
+        </div>
       </div>
 
       <!-- 右侧内容在关闭时隐藏 -->
@@ -1034,6 +1108,78 @@ $front-font-color: #d54941;
         width: 100%;
         height: 100%;
         object-fit: contain;
+      }
+
+      // 轮播图样式
+      .image-carousel {
+        position: relative;
+        width: 100%;
+        height: 100%;
+
+        .carousel-main {
+          width: 100%;
+          height: 100%;
+        }
+
+        .carousel-btn {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: rgba(0, 0, 0, 0.5);
+          color: #fff;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.3s;
+          z-index: 10;
+
+          &:hover {
+            background: rgba(0, 0, 0, 0.7);
+          }
+
+          &-prev {
+            left: 15px;
+          }
+
+          &-next {
+            right: 15px;
+          }
+        }
+
+        .carousel-indicators {
+          position: absolute;
+          bottom: 15px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          gap: 8px;
+          z-index: 10;
+
+          .indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: all 0.3s;
+
+            &.active {
+              background: #fff;
+              width: 24px;
+              border-radius: 4px;
+            }
+
+            &:hover {
+              background: rgba(255, 255, 255, 0.8);
+            }
+          }
+        }
       }
     }
 
