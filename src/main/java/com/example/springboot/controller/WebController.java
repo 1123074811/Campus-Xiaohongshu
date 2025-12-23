@@ -72,13 +72,12 @@ public class WebController {
             return Result.error(Constants.CODE_400, "参数错误");
         }
 
-        if (StrUtil.equals(account.getRole(),"ROLE_USER")) {
-            userService.register(account);
-        }
-        if (StrUtil.equals(account.getRole(),"ROLE_ADMIN")) {
-            adminService.register(account);
+        // 注册功能只允许注册普通用户，不允许注册管理员
+        if (!StrUtil.equals(account.getRole(),"ROLE_USER")) {
+            return Result.error(Constants.CODE_400, "只能注册普通用户");
         }
 
+        userService.register(account);
         return Result.success();
     }
 
@@ -162,7 +161,7 @@ public class WebController {
             if (file == null || file.isEmpty()) {
                 return Result.error(Constants.CODE_400, "文件不能为空");
             }
-            
+
             String originalFilename = file.getOriginalFilename();
             String type = FileUtil.extName(originalFilename);
 
@@ -171,7 +170,7 @@ public class WebController {
 
             // 上传到OSS
             String url = aliOssUtil.upload(file.getBytes(), fileUUID);
-            
+
             return Result.success(url);
         } catch (Exception e) {
             e.printStackTrace();
@@ -186,9 +185,9 @@ public class WebController {
             if (file == null || file.isEmpty()) {
                 return Result.error(Constants.CODE_400, "文件不能为空");
             }
-            
+
             String originalFilename = file.getOriginalFilename();
-            
+
             // 检查文件名是否为空
             if (originalFilename == null || originalFilename.trim().isEmpty()) {
                 originalFilename = "未知文件";
@@ -202,7 +201,7 @@ public class WebController {
 
             // 上传到OSS
             String url = aliOssUtil.upload(file.getBytes(), fileUUID);
-            
+
             return Result.success(url);
         } catch (Exception e) {
             e.printStackTrace();

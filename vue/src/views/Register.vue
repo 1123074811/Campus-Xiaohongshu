@@ -10,12 +10,9 @@ import request from "@/utils/request.js";
 const router = useRouter()
 const userFormInst = ref(null)
 
-// 角色选项
+// 角色选项 - 注册时只能是普通用户
 const roleOptions = [
-  // 系统角色
-  { label: '普通用户', value: 'ROLE_USER' },
-  { label: '管理员', value: 'ROLE_ADMIN' },
-  // 系统角色
+  { label: '普通用户', value: 'ROLE_USER' }
 ]
 
 // 注册表单
@@ -42,9 +39,6 @@ const rules = {
   confirmPassword: [
     {required: true, message: '请确认密码', trigger: 'blur'},
     {min: 3, max: 10, message: '长度在 3 到 10 个字符', trigger: 'blur'}
-  ],
-  role: [
-    {required: true, message: '请选择角色', trigger: 'change'}
   ]
 }
 
@@ -169,20 +163,7 @@ const register = () => {
               </el-input>
             </el-form-item>
 
-            <el-form-item prop="role">
-              <el-select
-                  v-model="registerForm.role"
-                  placeholder="请选择角色"
-                  size="large"
-                  style="width: 100%">
-                <el-option
-                    v-for="item in roleOptions"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value">
-                </el-option>
-              </el-select>
-            </el-form-item>
+
 
             <el-form-item>
               <el-checkbox v-model="isAllow" class="allow-warp">
@@ -292,6 +273,18 @@ const register = () => {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.5);
+
+  @media (max-width: 1024px) {
+    width: 90%;
+    height: auto;
+    min-height: 600px;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    width: 95%;
+    max-width: 500px;
+  }
 }
 
 .register-left {
@@ -303,6 +296,12 @@ const register = () => {
   flex-direction: column;
   position: relative;
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    padding: 30px 20px;
+    min-height: auto;
+  }
 }
 
 .brand-logo {
@@ -311,6 +310,11 @@ const register = () => {
   margin-bottom: 60px;
   position: relative;
   z-index: 1;
+
+  @media (max-width: 768px) {
+    margin-bottom: 30px;
+    justify-content: center;
+  }
 
   .logo-circle {
     width: 40px;
@@ -333,6 +337,10 @@ const register = () => {
   .brand-name {
     font-size: 20px;
     font-weight: 600;
+
+    @media (max-width: 480px) {
+      font-size: 18px;
+    }
   }
 }
 
@@ -343,6 +351,10 @@ const register = () => {
   justify-content: center;
   position: relative;
   z-index: 1;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 
   .feature-item {
     display: flex;
@@ -387,6 +399,10 @@ const register = () => {
   text-align: center;
   position: relative;
   z-index: 1;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
 .register-right {
@@ -397,6 +413,10 @@ const register = () => {
   align-items: center;
   position: relative;
 
+  @media (max-width: 768px) {
+    width: 100%;
+    padding: 30px 20px;
+  }
 }
 
 .register-form-container {
@@ -407,6 +427,10 @@ const register = () => {
   overflow-y: auto;
   padding-right: 10px;
 
+  @media (max-width: 480px) {
+    width: 100%;
+    max-height: none;
+  }
 }
 
 .register-title {
@@ -414,18 +438,27 @@ const register = () => {
   font-weight: 600;
   color: #333;
   margin: 0 0 8px 0;
+
+  @media (max-width: 480px) {
+    font-size: 24px;
+  }
 }
 
 .register-subtitle {
   font-size: 16px;
   color: #666;
   margin: 0 0 30px 0;
+
+  @media (max-width: 480px) {
+    font-size: 14px;
+    margin: 0 0 20px 0;
+  }
 }
 
 .back-to-home {
   display: flex;
   justify-content: flex-start;
-  
+
   .back-button {
     font-size: 14px;
     color: #4084d9;
@@ -433,7 +466,7 @@ const register = () => {
     margin: 0;
     height: auto;
     line-height: normal;
-    
+
     &:hover {
       color: #3a76c4;
       background-color: transparent;
