@@ -525,18 +525,28 @@ const formatMessage = (content) => {
       thinkContents.push(match[1])
     }
 
-    // 移除所有思考标签
-    processedContent = processedContent
+    // 移除所有思考标签及其内容
+    processedContent = content
         .replace(/<think>[\s\S]*?<\/think>/g, '')
         .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
-        .trim() // 移除多余的空白
+        .trim()
 
     // 如果需要显示思考内容，在开头添加合并后的思考块
     if (showThinking.value && thinkContents.length > 0) {
       const mergedThinking = thinkContents.join('\n\n').trim()
       const thinkingBlock = `<div class="thinking-content"><div class="thinking-header"><i class="thinking-icon">🤔</i> AI思考过程</div><div class="thinking-text">${mergedThinking}</div></div>`
-      processedContent = thinkingBlock + processedContent
+      // 如果有最终答案，在思考块后面添加一个间隔
+      if (processedContent) {
+        processedContent = thinkingBlock + '<br><br>' + processedContent
+      } else {
+        processedContent = thinkingBlock
+      }
     }
+  }
+
+  // 如果最终内容仍为空，返回提示信息
+  if (!processedContent || processedContent.trim() === '') {
+    return '<span style="color: #999;">AI正在思考中...</span>'
   }
 
   // 简单的markdown格式化
