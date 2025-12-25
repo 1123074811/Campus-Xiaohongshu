@@ -2,7 +2,7 @@
 import {onMounted, ref} from 'vue'
 import request from '../../utils/request'
 import { useRouter } from 'vue-router'
-import {ElMessage} from "element-plus";
+import {ElMessage, ElMessageBox} from "element-plus";
 import blog from "@/views/back/Blog.vue";
 
 const users = ref([])
@@ -63,12 +63,51 @@ const checkFollow = (id) => {
 const initFollowStatus = () => {
   // 找出所有关注类型的消息的发送者ID
   const followerIds = [...new Set(messages.value
-    .filter(msg => msg.type === '关注')
-    .map(msg => msg.fromUserId))];
-  
+      .filter(msg => msg.type === '关注')
+      .map(msg => msg.fromUserId))];
+
   // 为每个发送者检查关注状态
   followerIds.forEach(id => checkFollow(id));
 };
+
+// 控制每条消息的操作菜单显示状态
+const showMenuId = ref(null)
+
+// 切换操作菜单
+const toggleMenu = (id) => {
+  if (showMenuId.value === id) {
+    showMenuId.value = null
+  } else {
+    showMenuId.value = id
+  }
+}
+
+// 删除通知
+const deleteMessage = (id) => {
+  showMenuId.value = null // 关闭菜单
+  ElMessageBox.confirm(
+      '确定要删除这条通知吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+  ).then(() => {
+    request.delete("/message/" + id).then(res => {
+      if (res.code === '200') {
+        ElMessage.success("删除成功")
+        loadMessage().then(() => {
+          initFollowStatus()
+        })
+      } else {
+        ElMessage.error("删除失败")
+      }
+    })
+  }).catch(() => {
+    // 用户取消删除
+  })
+}
 
 onMounted(() => {
   loadUser()
@@ -81,7 +120,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="content-container">
+  <div class="content-container" @click="showMenuId = null">
     <!-- 标题 -->
     <div class="header-title">
       <h2>互动消息</h2>
@@ -116,6 +155,18 @@ onMounted(() => {
             @click="follow(message.fromUserId)">
           {{ followedStatus[message.fromUserId] ? '已关注' : '回关' }}
         </button>
+        <!-- 操作菜单按钮 -->
+        <div class="menu-wrapper">
+          <button class="menu-button" @click.stop="toggleMenu(message.id)" title="更多操作">
+            ⋮
+          </button>
+          <!-- 下拉菜单 -->
+          <div v-show="showMenuId === message.id" class="dropdown-menu" @click.stop>
+            <div class="menu-item" @click="deleteMessage(message.id)">
+              删除消息
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 结束标识 -->
@@ -275,6 +326,74 @@ onMounted(() => {
     &:hover {
       background-color: #e8e8e8;
     }
+  }
+}
+
+.menu-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.menu-button {
+  background-color: transparent;
+  color: #999;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-weight: bold;
+
+  &:hover {
+    background-color: #f5f5f5;
+    color: #333;
+  }
+
+  @media (max-width: 768px) {
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
+  }
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  min-width: 120px;
+  z-index: 1000;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    min-width: 100px;
+  }
+}
+
+.menu-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  color: #333;
+  font-size: 14px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #f5f5f5;
+    color: #ff4d4f;
+  }
+
+  @media (max-width: 768px) {
+    padding: 10px 14px;
+    font-size: 13px;
   }
 }
 </style>
