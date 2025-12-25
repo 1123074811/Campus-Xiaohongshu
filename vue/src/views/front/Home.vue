@@ -491,6 +491,7 @@ const follow = (id) => {
                 class="img"
                 :preview-src-list="blogImages"
                 :initial-index="currentImageIndex"
+                fit="contain"
             ></el-image>
           </div>
 
