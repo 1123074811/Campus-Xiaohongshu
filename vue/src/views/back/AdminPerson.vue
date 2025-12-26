@@ -52,7 +52,19 @@ const save = () => {
 
 // 头像上传成功处理
 const handleAvatarSuccess = (res) => {
-  form.avatarUrl = res
+  console.log('头像上传响应:', res)
+  if (res.code === '200') {
+    form.avatarUrl = res.data
+    ElMessage.success('头像上传成功')
+  } else {
+    ElMessage.error(res.msg || '头像上传失败')
+  }
+}
+
+// 头像上传失败处理
+const handleAvatarError = (error) => {
+  console.error('头像上传失败:', error)
+  ElMessage.error('头像上传失败，请重试')
 }
 
 </script>
@@ -64,7 +76,7 @@ const handleAvatarSuccess = (res) => {
 
       <el-form label-width="80px">
         <div class="avatar-container">
-          <el-upload :action="`${serverHost}/web/upload`" :show-file-list="false" :on-success="handleAvatarSuccess">
+          <el-upload :action="`${serverHost}/web/upload`" :show-file-list="false" :on-success="handleAvatarSuccess" :on-error="handleAvatarError">
             <img v-if="form.avatarUrl" :src="form.avatarUrl" class="avatar">
             <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
           </el-upload>

@@ -155,7 +155,19 @@ const confirmBatchDelete = () => {
 
 // 头像上传
 const handleAvatarUrlUploadSuccess = (res) => {
-  form.value.avatarUrl = res;
+  console.log('头像上传响应:', res)
+  if (res.code === '200') {
+    form.value.avatarUrl = res.data
+    ElMessage.success('头像上传成功')
+  } else {
+    ElMessage.error(res.msg || '头像上传失败')
+  }
+};
+
+// 头像上传失败处理
+const handleAvatarUrlUploadError = (error) => {
+  console.error('头像上传失败:', error)
+  ElMessage.error('头像上传失败，请重试')
 };
 
 </script>
@@ -166,12 +178,12 @@ const handleAvatarUrlUploadSuccess = (res) => {
     <!-- 搜索和操作区域 -->
     <div class="action-bar">
       <div class="search-section">
-        <el-input 
-          v-model="searchForm.keyword" 
-          placeholder="请输入昵称" 
-          class="search-input" 
-          :prefix-icon="Search" 
-          clearable
+        <el-input
+            v-model="searchForm.keyword"
+            placeholder="请输入昵称"
+            class="search-input"
+            :prefix-icon="Search"
+            clearable
         />
         <el-button type="primary" @click="load" :icon="Search">搜索</el-button>
         <el-button @click="reset">重置</el-button>
@@ -230,7 +242,7 @@ const handleAvatarUrlUploadSuccess = (res) => {
         <el-form-item label="头像" required>
           <div class="upload-container">
             <el-avatar v-if="form.avatarUrl" :src="form.avatarUrl" :size="80" />
-            <el-upload :action="`${serverHost}/web/upload`" :on-success="handleAvatarUrlUploadSuccess" :show-file-list="false">
+            <el-upload :action="`${serverHost}/web/upload`" :on-success="handleAvatarUrlUploadSuccess" :on-error="handleAvatarUrlUploadError" :show-file-list="false">
               <el-button type="primary" :icon="UploadFilled">{{ form.avatarUrl ? '更换图片' : '上传图片' }}</el-button>
             </el-upload>
           </div>
@@ -301,15 +313,15 @@ const handleAvatarUrlUploadSuccess = (res) => {
     gap: 12px;
     align-items: stretch;
   }
-  
+
   .search-section {
     flex-wrap: wrap;
   }
-  
+
   .search-input {
     width: 100%;
   }
-  
+
   .toolbar-section {
     justify-content: flex-start;
   }
