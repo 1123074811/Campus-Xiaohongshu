@@ -218,6 +218,9 @@ import { useRouter } from 'vue-router'
 import request from '../../utils/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Service, Plus, Edit, Delete, Position } from '@element-plus/icons-vue'
+import { marked } from 'marked'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github-dark.css'
 
 const router = useRouter()
 
@@ -252,6 +255,22 @@ const uploadHeaders = computed(() => {
   return currentAccount && currentAccount.token ? {
     'token': currentAccount.token
   } : {}
+})
+
+// 配置 marked
+marked.setOptions({
+  highlight: function(code, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return hljs.highlight(code, { language: lang }).value
+      } catch (err) {
+        console.error('代码高亮错误:', err)
+      }
+    }
+    return hljs.highlightAuto(code).value
+  },
+  breaks: true, // 支持 GitHub 风格的换行
+  gfm: true, // 启用 GitHub Flavored Markdown
 })
 
 // 生命周期
@@ -534,7 +553,13 @@ const formatMessage = (content) => {
     // 如果需要显示思考内容，在开头添加合并后的思考块
     if (showThinking.value && thinkContents.length > 0) {
       const mergedThinking = thinkContents.join('\n\n').trim()
-      const thinkingBlock = `<div class="thinking-content"><div class="thinking-header"><i class="thinking-icon">🤔</i> AI思考过程</div><div class="thinking-text">${mergedThinking}</div></div>`
+      // 对思考内容进行HTML转义
+      const escapedThinking = mergedThinking
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\n/g, '<br>')
+      const thinkingBlock = `<div class="thinking-content"><div class="thinking-header"><i class="thinking-icon">🤔</i> AI思考过程</div><div class="thinking-text">${escapedThinking}</div></div>`
       // 如果有最终答案，在思考块后面添加一个间隔
       if (processedContent) {
         processedContent = thinkingBlock + '<br><br>' + processedContent
@@ -549,12 +574,31 @@ const formatMessage = (content) => {
     return '<span style="color: #999;">AI正在思考中...</span>'
   }
 
-  // 简单的markdown格式化
-  return processedContent
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code>$1</code>')
-      .replace(/\n/g, '<br>')
+  // 检查是否包含思考块标记
+  const hasSeparatedThinking = processedContent.includes('<div class="thinking-content">')
+
+  if (hasSeparatedThinking) {
+    // 提取思考块
+    const thinkingMatch = processedContent.match(/(<div class="thinking-content">.*?<\/div><\/div>)(<br><br>)?(.*)/s)
+    if (thinkingMatch) {
+      const thinkingBlock = thinkingMatch[1]
+      const mainContent = thinkingMatch[3] || ''
+
+      // 使用 marked 渲染主内容的 markdown
+      const renderedContent = mainContent.trim() ? marked.parse(mainContent) : ''
+
+      return thinkingBlock + (renderedContent ? '<br><br>' + renderedContent : '')
+    }
+  }
+
+  // 使用 marked 渲染完整的 markdown
+  try {
+    return marked.parse(processedContent)
+  } catch (error) {
+    console.error('Markdown渲染错误:', error)
+    // 降级为简单的HTML转义
+    return processedContent.replace(/\n/g, '<br>')
+  }
 }
 
 const formatTime = (timeStr) => {
@@ -956,6 +1000,127 @@ const handleKeydown = (e) => {
 
 .message-text :deep(.thinking-text br) {
   margin-bottom: 4px;
+}
+
+/* Markdown样式 */
+.message-text :deep(h1),
+.message-text :deep(h2),
+.message-text :deep(h3),
+.message-text :deep(h4),
+.message-text :deep(h5),
+.message-text :deep(h6) {
+  margin: 16px 0 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #333;
+}
+
+.message-text :deep(h1) { font-size: 24px; }
+.message-text :deep(h2) { font-size: 20px; }
+.message-text :deep(h3) { font-size: 18px; }
+.message-text :deep(h4) { font-size: 16px; }
+.message-text :deep(h5) { font-size: 14px; }
+.message-text :deep(h6) { font-size: 13px; }
+
+.message-text :deep(p) {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.message-text :deep(ul),
+.message-text :deep(ol) {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.message-text :deep(li) {
+  margin: 4px 0;
+  line-height: 1.6;
+}
+
+.message-text :deep(blockquote) {
+  margin: 12px 0;
+  padding: 8px 12px;
+  border-left: 4px solid #1890ff;
+  background-color: #f8f9fa;
+  color: #555;
+  font-style: italic;
+}
+
+.message-text :deep(pre) {
+  margin: 12px 0;
+  padding: 12px;
+  background-color: #1e1e1e;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.message-text :deep(pre code) {
+  background-color: transparent;
+  padding: 0;
+  color: #d4d4d4;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.message-text :deep(code) {
+  background-color: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  color: #e83e8c;
+}
+
+.message-text :deep(table) {
+  margin: 12px 0;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.message-text :deep(table th),
+.message-text :deep(table td) {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.message-text :deep(table th) {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.message-text :deep(table tr:nth-child(even)) {
+  background-color: #fafafa;
+}
+
+.message-text :deep(a) {
+  color: #1890ff;
+  text-decoration: none;
+}
+
+.message-text :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.message-text :deep(hr) {
+  margin: 16px 0;
+  border: none;
+  border-top: 1px solid #e8e8e8;
+}
+
+.message-text :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+/* 用户消息气泡内的代码样式 */
+.bubble-user .message-text :deep(code) {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
 
 .message-time {
