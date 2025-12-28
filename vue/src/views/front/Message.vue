@@ -229,6 +229,11 @@ onMounted(() => {
       margin: 0 -10px;
       padding: 12px 10px;
     }
+
+    .menu-button {
+      opacity: 1;
+      visibility: visible;
+    }
   }
 }
 
@@ -349,6 +354,8 @@ onMounted(() => {
   justify-content: center;
   transition: all 0.2s ease;
   font-weight: bold;
+  opacity: 0;
+  visibility: hidden;
 
   &:hover {
     background-color: #f5f5f5;

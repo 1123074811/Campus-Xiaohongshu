@@ -135,7 +135,11 @@ const blogWidth = ref(270)
 // 计算间距
 const gutterWidth = computed(() => {
   const totalBlogWidth = col.value * blogWidth.value
-  return Math.floor((waterfallContainerWidth.value - totalBlogWidth) / col.value)
+  const remainingSpace = waterfallContainerWidth.value - totalBlogWidth
+  // 间距 = 剩余空间 / (列数 + 1)，确保左右两侧也有间距
+  // 如果剩余空间不足，使用最小间距10px
+  const calculatedGutter = Math.floor(remainingSpace / (col.value + 1))
+  return Math.max(10, calculatedGutter)
 })
 
 // Dialog相关状态
