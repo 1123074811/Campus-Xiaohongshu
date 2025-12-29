@@ -30,10 +30,10 @@ import static org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID;
 @Service
 @RequiredArgsConstructor
 public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMessage> implements IAiChatService {
-
+    
     private final AiChatSessionMapper sessionMapper;
     private final DynamicChatClientService dynamicChatClientService;
-
+    
     @Override
     @Transactional
     public AiChatSession createSession(Long userId, String title) {
@@ -41,24 +41,24 @@ public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMe
         if (userId == null) {
             throw new IllegalArgumentException("用户ID不能为空");
         }
-
+        
         AiChatSession session = new AiChatSession();
         String sessionId = IdUtil.fastSimpleUUID();
-
+        
         // 确保sessionId不为空
         if (StrUtil.isBlank(sessionId)) {
             throw new RuntimeException("生成会话ID失败");
         }
-
+        
         session.setSessionId(sessionId);
         session.setUserId(userId);
         session.setTitle(StrUtil.isBlank(title) ? "新对话" : title);
         session.setCreateTime(LocalDateTime.now());
         session.setUpdateTime(LocalDateTime.now());
         session.setIsDeleted(0); // 显式设置删除标志
-
+        
         log.info("创建AI会话: sessionId={}, userId={}, title={}", sessionId, userId, session.getTitle());
-
+        
         try {
             sessionMapper.insert(session);
             log.info("AI会话创建成功: id={}", session.getId());
@@ -66,10 +66,10 @@ public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMe
             log.error("创建AI会话失败: ", e);
             throw new RuntimeException("创建会话失败: " + e.getMessage());
         }
-
+        
         return session;
     }
-
+    
     @Override
     public List<AiChatSession> getUserSessions(Long userId) {
         LambdaQueryWrapper<AiChatSession> wrapper = new LambdaQueryWrapper<>();
@@ -77,7 +77,7 @@ public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMe
                 .orderByDesc(AiChatSession::getUpdateTime);
         return sessionMapper.selectList(wrapper);
     }
-
+    
     @Override
     public List<AiChatMessage> getSessionMessages(String sessionId, Long userId) {
         LambdaQueryWrapper<AiChatMessage> wrapper = new LambdaQueryWrapper<>();
@@ -86,7 +86,7 @@ public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMe
                 .orderByAsc(AiChatMessage::getCreateTime);
         return this.list(wrapper);
     }
-
+    
     @Override
     @Transactional
     public Flux<String> chatStream(String sessionId, Long userId, String message) {
@@ -98,19 +98,19 @@ public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMe
         userMessage.setContent(message);
         userMessage.setCreateTime(LocalDateTime.now());
         this.save(userMessage);
-
+        
         // 更新会话时间
         updateSessionTime(sessionId);
-
+        
         // 用于收集完整的AI回复
         StringBuilder responseBuilder = new StringBuilder();
-
+        
         // 构建包含思考指令的提示词
         String enhancedPrompt = buildEnhancedPrompt(message);
-
+        
         // 获取动态配置的ChatClient
         ChatClient chatClient = dynamicChatClientService.getCurrentChatClient();
-
+        
         // 获取AI回复流
         return chatClient.prompt()
                 .user(enhancedPrompt)
@@ -138,7 +138,7 @@ public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMe
                     saveAiResponse(sessionId, userId, "抱歉，我遇到了一些问题，请稍后再试。");
                 });
     }
-
+    
     @Override
     @Transactional
     public boolean deleteSession(String sessionId, Long userId) {
@@ -147,16 +147,16 @@ public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMe
         sessionWrapper.eq(AiChatSession::getSessionId, sessionId)
                 .eq(AiChatSession::getUserId, userId);
         int sessionResult = sessionMapper.delete(sessionWrapper);
-
+        
         // 删除消息
         LambdaQueryWrapper<AiChatMessage> messageWrapper = new LambdaQueryWrapper<>();
         messageWrapper.eq(AiChatMessage::getSessionId, sessionId)
                 .eq(AiChatMessage::getUserId, userId);
         boolean messageResult = this.remove(messageWrapper);
-
+        
         return sessionResult > 0;
     }
-
+    
     @Override
     @Transactional
     public boolean updateSessionTitle(String sessionId, Long userId, String title) {
@@ -165,10 +165,10 @@ public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMe
                 .eq(AiChatSession::getUserId, userId)
                 .set(AiChatSession::getTitle, title)
                 .set(AiChatSession::getUpdateTime, LocalDateTime.now());
-
+        
         return sessionMapper.update(null, wrapper) > 0;
     }
-
+    
     /**
      * 构建增强的提示词，指导AI使用思考标识
      * DeepSeek-R1模型会自动使用<think>标签输出思考过程，不需要额外提示
@@ -177,7 +177,7 @@ public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMe
         // DeepSeek-R1模型原生支持思考标签，直接返回用户问题
         return userMessage;
     }
-
+    
     /**
      * 处理AI回复块，为思考内容添加特殊标识
      */
@@ -185,7 +185,7 @@ public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMe
         // 这里可以进一步处理思考标识，比如转换为前端识别的格式
         return chunk;
     }
-
+    
     /**
      * 更新会话时间
      */
@@ -193,10 +193,10 @@ public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMe
         LambdaUpdateWrapper<AiChatSession> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(AiChatSession::getSessionId, sessionId)
                 .set(AiChatSession::getUpdateTime, LocalDateTime.now());
-
+        
         sessionMapper.update(null, wrapper);
     }
-
+    
     /**
      * 保存AI回复消息
      */

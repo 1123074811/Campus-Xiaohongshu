@@ -77,6 +77,11 @@ public class WebController {
             return Result.error(Constants.CODE_400, "只能注册普通用户");
         }
 
+        // 验证安全问题和答案（可选，如果前端传递了这些信息）
+        if (StrUtil.isNotBlank(account.getSecurityQuestion()) && StrUtil.isBlank(account.getSecurityAnswer())) {
+            return Result.error(Constants.CODE_400, "设置了安全问题必须提供答案");
+        }
+
         userService.register(account);
         return Result.success();
     }

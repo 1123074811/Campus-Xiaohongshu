@@ -28,6 +28,14 @@ const routes = [
     }
   },
   {
+    path: '/password-reset',
+    name: 'PasswordReset',
+    component: () => import('../views/PasswordReset.vue'),
+    meta: {
+      title: '找回密码'
+    }
+  },
+  {
     path: '/404',
     name: '404',
     component: () => import('../views/404.vue'),

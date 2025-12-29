@@ -76,7 +76,7 @@ const handleAvatarError = (error) => {
 
       <el-form label-width="80px">
         <div class="avatar-container">
-          <el-upload :action="`${serverHost}/web/upload`" :show-file-list="false" :on-success="handleAvatarSuccess" :on-error="handleAvatarError">
+           <el-upload :action="`${serverHost}/web/upload`" :show-file-list="false" :on-success="handleAvatarSuccess" :on-error="handleAvatarError">
             <img v-if="form.avatarUrl" :src="form.avatarUrl" class="avatar">
             <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
           </el-upload>

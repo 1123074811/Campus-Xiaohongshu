@@ -63,7 +63,7 @@ public class WebSocketServer {
         JSONObject obj = JSONUtil.parseObj(message);
 
         String messageType = obj.getStr("messageType");
-
+        
         // 处理普通聊天消息
         if ("chat".equals(messageType) || messageType == null) {
             handleChatMessage(obj);

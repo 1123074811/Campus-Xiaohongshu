@@ -166,6 +166,11 @@ const login = () => {
               </el-checkbox>
             </el-form-item>
 
+            <!-- 找回密码链接 -->
+            <div class="forgot-password">
+              <router-link to="/password-reset" class="forgot-link">忘记密码？</router-link>
+            </div>
+
             <el-form-item>
               <el-button
                   class="login-button"
@@ -267,6 +272,18 @@ const login = () => {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.5);
+
+  @media (max-width: 1024px) {
+    width: 90%;
+    height: auto;
+    min-height: 500px;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    width: 95%;
+    max-width: 500px;
+  }
 }
 
 .login-left {
@@ -278,6 +295,12 @@ const login = () => {
   flex-direction: column;
   position: relative;
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    padding: 30px 20px;
+    min-height: auto;
+  }
 }
 
 .brand-logo {
@@ -286,6 +309,11 @@ const login = () => {
   margin-bottom: 60px;
   position: relative;
   z-index: 1;
+
+  @media (max-width: 768px) {
+    margin-bottom: 30px;
+    justify-content: center;
+  }
 
   .logo-circle {
     width: 40px;
@@ -308,6 +336,10 @@ const login = () => {
   .brand-name {
     font-size: 20px;
     font-weight: 600;
+
+    @media (max-width: 480px) {
+      font-size: 18px;
+    }
   }
 }
 
@@ -318,6 +350,10 @@ const login = () => {
   justify-content: center;
   position: relative;
   z-index: 1;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 
   .feature-item {
     display: flex;
@@ -362,6 +398,10 @@ const login = () => {
   text-align: center;
   position: relative;
   z-index: 1;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
 .login-right {
@@ -371,12 +411,21 @@ const login = () => {
   justify-content: center;
   align-items: center;
   position: relative;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    padding: 30px 20px;
+  }
 }
 
 .login-form-container {
   width: 360px;
   position: relative;
   z-index: 1;
+
+  @media (max-width: 480px) {
+    width: 100%;
+  }
 }
 
 .login-title {
@@ -384,6 +433,10 @@ const login = () => {
   font-weight: 600;
   color: #333;
   margin: 0 0 8px 0;
+
+  @media (max-width: 480px) {
+    font-size: 24px;
+  }
 }
 
 .back-to-home {
@@ -408,6 +461,11 @@ const login = () => {
   font-size: 16px;
   color: #666;
   margin: 0 0 40px 0;
+
+  @media (max-width: 480px) {
+    font-size: 14px;
+    margin: 0 0 20px 0;
+  }
 }
 
 .login-form {
@@ -431,6 +489,23 @@ const login = () => {
 
     &:disabled {
       background: linear-gradient(to right, #a0c3f0, #8eadd3);
+    }
+  }
+}
+
+.forgot-password {
+  text-align: right;
+  margin-bottom: 20px;
+
+  .forgot-link {
+    color: #4084d9;
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.3s;
+
+    &:hover {
+      color: #3a76c4;
+      text-decoration: underline;
     }
   }
 }

@@ -2,11 +2,11 @@
 import { ref, onMounted, nextTick } from 'vue'
 import * as echarts from 'echarts';
 import request from "@/utils/request.js";
-import {
-  User,
-  Document,
-  ChatDotRound,
-  Star,
+import { 
+  User, 
+  Document, 
+  ChatDotRound, 
+  Star, 
   Collection,
   TrendCharts
 } from '@element-plus/icons-vue'
@@ -64,7 +64,7 @@ const loadOverview = () => {
 const initCategoryChart = () => {
   const chartDom = document.getElementById('categoryChart');
   if (!chartDom) return;
-
+  
   categoryChart = echarts.init(chartDom);
   const option = {
     title: {
@@ -129,7 +129,7 @@ const initCategoryChart = () => {
 const initTrendChart = () => {
   const chartDom = document.getElementById('trendChart');
   if (!chartDom) return;
-
+  
   trendChart = echarts.init(chartDom);
   loadTrendData();
 }
@@ -145,7 +145,7 @@ const loadTrendData = () => {
     if (res.data) {
       const dates = res.data.map(item => item.date)
       const counts = res.data.map(item => item.count)
-
+      
       const option = {
         title: {
           text: '博客发布趋势',
@@ -200,7 +200,7 @@ const loadTrendData = () => {
           }
         ]
       };
-
+      
       if (trendChart) {
         trendChart.setOption(option);
       }
@@ -212,7 +212,7 @@ const loadTrendData = () => {
 const initActivityChart = () => {
   const chartDom = document.getElementById('activityChart');
   if (!chartDom) return;
-
+  
   activityChart = echarts.init(chartDom);
   loadActivityData();
 }
@@ -228,7 +228,7 @@ const loadActivityData = () => {
     if (res.data) {
       const dates = res.data.map(item => item.date)
       const activeUsers = res.data.map(item => item.activeUsers)
-
+      
       const option = {
         title: {
           text: '用户活跃度统计',
@@ -274,7 +274,7 @@ const loadActivityData = () => {
           }
         ]
       };
-
+      
       if (activityChart) {
         activityChart.setOption(option);
       }
@@ -286,7 +286,7 @@ const loadActivityData = () => {
 const initInteractionChart = () => {
   const chartDom = document.getElementById('interactionChart');
   if (!chartDom) return;
-
+  
   interactionChart = echarts.init(chartDom);
   loadInteractionData();
 }
@@ -302,7 +302,7 @@ const loadInteractionData = () => {
     if (res.data) {
       const dates = res.data.map(item => item.date)
       const comments = res.data.map(item => item.comments)
-
+      
       const option = {
         title: {
           text: '互动数据统计',
@@ -351,7 +351,7 @@ const loadInteractionData = () => {
           }
         ]
       };
-
+      
       if (interactionChart) {
         interactionChart.setOption(option);
       }
@@ -369,7 +369,7 @@ const handleTimeRangeChange = () => {
   } else {
     dataLimit.value = 30
   }
-
+  
   // 重新加载所有图表数据
   loadTrendData()
   loadActivityData()
@@ -395,7 +395,7 @@ onMounted(() => {
     initTrendChart()
     initActivityChart()
     initInteractionChart()
-
+    
     window.addEventListener('resize', handleResize)
   })
 })
@@ -616,7 +616,7 @@ onUnmounted(() => {
   .overview-cards {
     grid-template-columns: repeat(2, 1fr);
   }
-
+  
   .chart-container {
     height: 300px;
   }

@@ -5,7 +5,7 @@ import lombok.Data;
 
 /**
  * <p>
- * 实体类
+ * 账户基类
  * </p>
  */
 
@@ -18,12 +18,17 @@ public class Account {
     private String nickname;
     private String avatarUrl;
 
-
     @TableField(exist = false)
     private String role;
     @TableField(exist = false)
     private String newPassword;
     @TableField(exist = false)
     private String token;
+    
+    // 安全问题相关字段（用于注册和找回密码）
+    @TableField(exist = false)
+    private String securityQuestion;
+    @TableField(exist = false)
+    private String securityAnswer;
 
 }

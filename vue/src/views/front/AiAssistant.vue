@@ -6,11 +6,11 @@
         <div class="header-left">
           <h3>AI助手</h3>
         </div>
-        <el-button
-            type="primary"
-            size="small"
-            @click="createNewSession"
-            :icon="Plus"
+        <el-button 
+          type="primary" 
+          size="small" 
+          @click="createNewSession"
+          :icon="Plus"
         >
           新对话
         </el-button>
@@ -18,11 +18,11 @@
 
       <div class="sessions-list">
         <div
-            v-for="session in sessions"
-            :key="session.sessionId"
-            class="session-item"
-            :class="{ 'active': currentSession?.sessionId === session.sessionId }"
-            @click="selectSession(session)"
+          v-for="session in sessions"
+          :key="session.sessionId"
+          class="session-item"
+          :class="{ 'active': currentSession?.sessionId === session.sessionId }"
+          @click="selectSession(session)"
         >
           <div class="session-info">
             <div class="session-title">{{ session.title }}</div>
@@ -30,16 +30,16 @@
           </div>
           <div class="session-actions">
             <el-button
-                type="text"
-                size="small"
-                @click.stop="editSessionTitle(session)"
-                :icon="Edit"
+              type="text"
+              size="small"
+              @click.stop="editSessionTitle(session)"
+              :icon="Edit"
             />
             <el-button
-                type="text"
-                size="small"
-                @click.stop="deleteSession(session)"
-                :icon="Delete"
+              type="text"
+              size="small"
+              @click.stop="deleteSession(session)"
+              :icon="Delete"
             />
           </div>
         </div>
@@ -59,16 +59,16 @@
               <span class="ai-status">智能助手</span>
             </div>
           </div>
-
+          
           <!-- 思考内容显示控制 -->
           <div class="thinking-control">
             <el-switch
-                v-model="showThinking"
-                size="small"
-                active-text="显示思考"
-                inactive-text="隐藏思考"
-                :active-value="true"
-                :inactive-value="false"
+              v-model="showThinking"
+              size="small"
+              active-text="显示思考"
+              inactive-text="隐藏思考"
+              :active-value="true"
+              :inactive-value="false"
             />
           </div>
         </div>
@@ -83,12 +83,12 @@
             <p>我是你的智能助手，有什么可以帮助你的吗？</p>
             <div class="quick-questions">
               <el-button
-                  v-for="question in quickQuestions"
-                  :key="question"
-                  type="default"
-                  size="small"
-                  @click="sendQuickQuestion(question)"
-                  class="quick-question-btn"
+                v-for="question in quickQuestions"
+                :key="question"
+                type="default"
+                size="small"
+                @click="sendQuickQuestion(question)"
+                class="quick-question-btn"
               >
                 {{ question }}
               </el-button>
@@ -97,10 +97,10 @@
 
           <!-- 聊天消息 -->
           <div
-              v-for="(message, index) in messages"
-              :key="index"
-              class="message-wrapper"
-              :class="{ 'message-user': message.messageType === 'USER' }"
+            v-for="(message, index) in messages"
+            :key="index"
+            class="message-wrapper"
+            :class="{ 'message-user': message.messageType === 'USER' }"
           >
             <div class="message-avatar" v-if="message.messageType === 'ASSISTANT'">
               <el-icon :size="20"><Service /></el-icon>
@@ -155,13 +155,13 @@
           <div class="message-editor">
             <div class="textarea-wrapper">
               <el-input
-                  type="textarea"
-                  v-model="inputText"
-                  :autosize="{ minRows: 1, maxRows: 6 }"
-                  placeholder="请输入你的问题..."
-                  @keydown="handleKeydown"
-                  class="message-textarea"
-                  :disabled="isAiTyping"
+                type="textarea"
+                v-model="inputText"
+                :autosize="{ minRows: 1, maxRows: 6 }"
+                placeholder="请输入你的问题..."
+                @keydown="handleKeydown"
+                class="message-textarea"
+                :disabled="isAiTyping"
               />
             </div>
           </div>
@@ -172,10 +172,10 @@
               按 Enter 发送，Shift + Enter 换行
             </span>
             <el-button
-                type="primary"
-                @click="sendMessage"
-                :disabled="!inputText.trim() || isAiTyping"
-                :loading="isAiTyping"
+              type="primary"
+              @click="sendMessage"
+              :disabled="!inputText.trim() || isAiTyping"
+              :loading="isAiTyping"
             >
               {{ isAiTyping ? '思考中...' : '发送消息' }}
             </el-button>
@@ -192,15 +192,15 @@
 
     <!-- 编辑会话标题对话框 -->
     <el-dialog
-        v-model="showEditDialog"
-        title="编辑会话标题"
-        width="400px"
+      v-model="showEditDialog"
+      title="编辑会话标题"
+      width="400px"
     >
       <el-input
-          v-model="editingTitle"
-          placeholder="请输入会话标题"
-          maxlength="50"
-          show-word-limit
+        v-model="editingTitle"
+        placeholder="请输入会话标题"
+        maxlength="50"
+        show-word-limit
       />
       <template #footer>
         <span class="dialog-footer">
@@ -301,7 +301,7 @@ const loadSessions = async () => {
       headers: uploadHeaders.value
     })
     sessions.value = res.data || []
-
+    
     // 如果有会话，默认选择第一个
     if (sessions.value.length > 0 && !currentSession.value) {
       selectSession(sessions.value[0])
@@ -319,11 +319,11 @@ const createNewSession = async () => {
     }, {
       headers: uploadHeaders.value
     })
-
+    
     const newSession = res.data
     sessions.value.unshift(newSession)
     selectSession(newSession)
-
+    
     ElMessage.success('创建新对话成功')
   } catch (error) {
     console.error('创建会话失败:', error)
@@ -351,10 +351,10 @@ const loadMessages = async (sessionId) => {
 
 const sendMessage = async () => {
   if (!inputText.value.trim() || !currentSession.value) return
-
+  
   const userMessage = inputText.value.trim()
   inputText.value = ''
-
+  
   // 添加用户消息到界面
   const userMsg = {
     messageType: 'USER',
@@ -363,11 +363,11 @@ const sendMessage = async () => {
   }
   messages.value.push(userMsg)
   scrollToBottom()
-
+  
   // 开始AI回复
   isAiTyping.value = true
   streamingMessage.value = ''
-
+  
   try {
     // 使用fetch进行流式请求
     const response = await fetch(`${request.defaults.baseURL}/ai/chat?sessionId=${currentSession.value.sessionId}&message=${encodeURIComponent(userMessage)}`, {
@@ -377,24 +377,24 @@ const sendMessage = async () => {
         'Content-Type': 'application/json'
       }
     })
-
+    
     if (!response.ok) {
       throw new Error('网络请求失败')
     }
-
+    
     const reader = response.body.getReader()
     const decoder = new TextDecoder('utf-8')
-
+    
     while (true) {
       const { done, value } = await reader.read()
-
+      
       if (done) break
-
+      
       const chunk = decoder.decode(value, { stream: true })
       streamingMessage.value += chunk
       scrollToBottom()
     }
-
+    
     // 流式回复完成，保存AI消息
     const aiMsg = {
       messageType: 'ASSISTANT',
@@ -402,15 +402,15 @@ const sendMessage = async () => {
       createTime: new Date().toISOString()
     }
     messages.value.push(aiMsg)
-
+    
     // 清理流式消息
     streamingMessage.value = ''
-
+    
     // 更新会话标题（如果是第一条消息）
     if (messages.value.filter(m => m.messageType === 'USER').length === 1) {
       updateSessionTitle(currentSession.value.sessionId, userMessage.substring(0, 20))
     }
-
+    
   } catch (error) {
     console.error('发送消息失败:', error)
     ElMessage.error('发送消息失败，请重试')
@@ -436,20 +436,20 @@ const saveSessionTitle = async () => {
     ElMessage.warning('请输入会话标题')
     return
   }
-
+  
   try {
     await request.put(`/ai/session/${editingSession.value.sessionId}/title`, {
       title: editingTitle.value.trim()
     }, {
       headers: uploadHeaders.value
     })
-
+    
     // 更新本地数据
     const session = sessions.value.find(s => s.sessionId === editingSession.value.sessionId)
     if (session) {
       session.title = editingTitle.value.trim()
     }
-
+    
     showEditDialog.value = false
     ElMessage.success('会话标题更新成功')
   } catch (error) {
@@ -465,7 +465,7 @@ const updateSessionTitle = async (sessionId, title) => {
     }, {
       headers: uploadHeaders.value
     })
-
+    
     // 更新本地数据
     const session = sessions.value.find(s => s.sessionId === sessionId)
     if (session) {
@@ -479,36 +479,36 @@ const updateSessionTitle = async (sessionId, title) => {
 const deleteSession = async (session) => {
   try {
     await ElMessageBox.confirm(
-        '确定要删除这个会话吗？删除后无法恢复。',
-        '确认删除',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning',
-        }
+      '确定要删除这个会话吗？删除后无法恢复。',
+      '确认删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
     )
-
+    
     await request.delete(`/ai/session/${session.sessionId}`, {
       headers: uploadHeaders.value
     })
-
+    
     // 从列表中移除
     const index = sessions.value.findIndex(s => s.sessionId === session.sessionId)
     if (index > -1) {
       sessions.value.splice(index, 1)
     }
-
+    
     // 如果删除的是当前会话，清空当前会话
     if (currentSession.value?.sessionId === session.sessionId) {
       currentSession.value = null
       messages.value = []
-
+      
       // 选择下一个会话
       if (sessions.value.length > 0) {
         selectSession(sessions.value[0])
       }
     }
-
+    
     ElMessage.success('会话删除成功')
   } catch (error) {
     if (error !== 'cancel') {
@@ -520,45 +520,45 @@ const deleteSession = async (session) => {
 
 const formatMessage = (content) => {
   if (!content) return ''
-
+  
   // 处理思考内容 - 将所有思考块合并为一个
   let processedContent = content
-
+  
   // 检查是否包含思考标签
   const hasThink = content.includes('<think>') && content.includes('</think>')
   const hasThinking = content.includes('<thinking>') && content.includes('</thinking>')
-
+  
   if (hasThink || hasThinking) {
     // 提取所有思考内容
     const thinkContents = []
-
+    
     // 提取 <think> 标签内容
     const thinkMatches = content.matchAll(/<think>([\s\S]*?)<\/think>/g)
     for (const match of thinkMatches) {
       thinkContents.push(match[1])
     }
-
+    
     // 提取 <thinking> 标签内容
     const thinkingMatches = content.matchAll(/<thinking>([\s\S]*?)<\/thinking>/g)
     for (const match of thinkingMatches) {
       thinkContents.push(match[1])
     }
-
+    
     // 移除所有思考标签及其内容
     processedContent = content
-        .replace(/<think>[\s\S]*?<\/think>/g, '')
-        .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
-        .trim()
-
+      .replace(/<think>[\s\S]*?<\/think>/g, '')
+      .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+      .trim()
+    
     // 如果需要显示思考内容，在开头添加合并后的思考块
     if (showThinking.value && thinkContents.length > 0) {
       const mergedThinking = thinkContents.join('\n\n').trim()
       // 对思考内容进行HTML转义
       const escapedThinking = mergedThinking
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/\n/g, '<br>')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>')
       const thinkingBlock = `<div class="thinking-content"><div class="thinking-header"><i class="thinking-icon">🤔</i> AI思考过程</div><div class="thinking-text">${escapedThinking}</div></div>`
       // 如果有最终答案，在思考块后面添加一个间隔
       if (processedContent) {
@@ -568,29 +568,29 @@ const formatMessage = (content) => {
       }
     }
   }
-
+  
   // 如果最终内容仍为空，返回提示信息
   if (!processedContent || processedContent.trim() === '') {
     return '<span style="color: #999;">AI正在思考中...</span>'
   }
-
+  
   // 检查是否包含思考块标记
   const hasSeparatedThinking = processedContent.includes('<div class="thinking-content">')
-
+  
   if (hasSeparatedThinking) {
     // 提取思考块
     const thinkingMatch = processedContent.match(/(<div class="thinking-content">.*?<\/div><\/div>)(<br><br>)?(.*)/s)
     if (thinkingMatch) {
       const thinkingBlock = thinkingMatch[1]
       const mainContent = thinkingMatch[3] || ''
-
+      
       // 使用 marked 渲染主内容的 markdown
       const renderedContent = mainContent.trim() ? marked.parse(mainContent) : ''
-
+      
       return thinkingBlock + (renderedContent ? '<br><br>' + renderedContent : '')
     }
   }
-
+  
   // 使用 marked 渲染完整的 markdown
   try {
     return marked.parse(processedContent)
@@ -603,18 +603,18 @@ const formatMessage = (content) => {
 
 const formatTime = (timeStr) => {
   if (!timeStr) return ''
-
+  
   try {
     const time = new Date(timeStr)
-
+    
     // 检查日期是否有效
     if (isNaN(time.getTime())) {
       return ''
     }
-
+    
     const now = new Date()
     const diff = now - time
-
+    
     if (diff < 60000) { // 1分钟内
       return '刚刚'
     } else if (diff < 3600000) { // 1小时内
@@ -810,9 +810,9 @@ const handleKeydown = (e) => {
   overflow-y: auto;
   padding: 20px;
   background-color: #f9fafc;
-  background-image:
-      linear-gradient(rgba(240, 240, 240, 0.5) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(240, 240, 240, 0.5) 1px, transparent 1px);
+  background-image: 
+    linear-gradient(rgba(240, 240, 240, 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240, 240, 240, 0.5) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
@@ -1264,33 +1264,33 @@ const handleKeydown = (e) => {
     border-radius: 0;
     min-height: calc(100vh - 60px);
   }
-
+  
   .sessions-panel {
     width: 100%;
     height: 40%;
     border-right: none;
     border-bottom: 1px solid #f0f0f0;
   }
-
+  
   .chat-panel {
     height: 60%;
   }
-
+  
   .panel-header,
   .chat-header {
     height: 50px;
     padding: 12px 15px;
   }
-
+  
   .message-content {
     max-width: 85%;
   }
-
+  
   .quick-questions {
     flex-direction: column;
     align-items: center;
   }
-
+  
   .quick-question-btn {
     width: 100%;
     max-width: 300px;
@@ -1301,44 +1301,44 @@ const handleKeydown = (e) => {
   .sessions-panel {
     height: 35%;
   }
-
+  
   .chat-panel {
     height: 65%;
   }
-
+  
   .panel-header,
   .chat-header {
     height: 45px;
     padding: 10px 12px;
   }
-
+  
   .messages-container {
     padding: 15px;
   }
-
+  
   .input-container {
     padding: 10px 12px;
   }
-
+  
   .message-content {
     max-width: 90%;
   }
-
+  
   .ai-avatar,
   .message-avatar {
     width: 28px;
     height: 28px;
   }
-
+  
   .ai-avatar-large {
     width: 60px;
     height: 60px;
   }
-
+  
   .welcome-message h3 {
     font-size: 20px;
   }
-
+  
   .welcome-message p {
     font-size: 14px;
   }

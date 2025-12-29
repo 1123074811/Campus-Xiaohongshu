@@ -151,16 +151,16 @@ const showBlog = (item, event) => {
   commentItemId.value = item.id
   checkFollow(blog.value.userId)
   loadComment()
-
+  
   // 加载多图数据
   blogImages.value = []
   currentImageIndex.value = 0
-
+  
   // 优先使用封面图作为第一张
   if (item.img) {
     blogImages.value.push(item.img)
   }
-
+  
   // 如果有多图数据，添加到数组中（排除封面图重复）
   if (item.images) {
     try {
@@ -489,38 +489,38 @@ const follow = (id) => {
         <div v-else class="image-carousel">
           <!-- 图片容器 -->
           <div class="carousel-main">
-            <el-image
-                :src="blogImages[currentImageIndex]"
-                class="img"
-                :preview-src-list="blogImages"
-                :initial-index="currentImageIndex"
-                fit="contain"
+            <el-image 
+              :src="blogImages[currentImageIndex]" 
+              class="img" 
+              :preview-src-list="blogImages" 
+              :initial-index="currentImageIndex"
+              fit="contain"
             ></el-image>
           </div>
-
+          
           <!-- 切换按钮 -->
-          <button
-              v-if="blogImages.length > 1 && currentImageIndex > 0"
-              @click.stop="prevImage"
-              class="carousel-btn carousel-btn-prev"
+          <button 
+            v-if="blogImages.length > 1 && currentImageIndex > 0" 
+            @click.stop="prevImage" 
+            class="carousel-btn carousel-btn-prev"
           >
             ‹
           </button>
-          <button
-              v-if="blogImages.length > 1 && currentImageIndex < blogImages.length - 1"
-              @click.stop="nextImage"
-              class="carousel-btn carousel-btn-next"
+          <button 
+            v-if="blogImages.length > 1 && currentImageIndex < blogImages.length - 1" 
+            @click.stop="nextImage" 
+            class="carousel-btn carousel-btn-next"
           >
             ›
           </button>
-
+          
           <!-- 指示器 -->
           <div v-if="blogImages.length > 1" class="carousel-indicators">
-            <span
-                v-for="(img, index) in blogImages"
-                :key="index"
-                :class="['indicator', { 'active': index === currentImageIndex }]"
-                @click.stop="currentImageIndex = index"
+            <span 
+              v-for="(img, index) in blogImages" 
+              :key="index" 
+              :class="['indicator', { 'active': index === currentImageIndex }]"
+              @click.stop="currentImageIndex = index"
             ></span>
           </div>
         </div>
@@ -1113,18 +1113,18 @@ $front-font-color: #d54941;
         height: 100%;
         object-fit: contain;
       }
-
+      
       // 轮播图样式
       .image-carousel {
         position: relative;
         width: 100%;
         height: 100%;
-
+        
         .carousel-main {
           width: 100%;
           height: 100%;
         }
-
+        
         .carousel-btn {
           position: absolute;
           top: 50%;
@@ -1142,20 +1142,20 @@ $front-font-color: #d54941;
           justify-content: center;
           transition: background 0.3s;
           z-index: 10;
-
+          
           &:hover {
             background: rgba(0, 0, 0, 0.7);
           }
-
+          
           &-prev {
             left: 15px;
           }
-
+          
           &-next {
             right: 15px;
           }
         }
-
+        
         .carousel-indicators {
           position: absolute;
           bottom: 15px;
@@ -1164,7 +1164,7 @@ $front-font-color: #d54941;
           display: flex;
           gap: 8px;
           z-index: 10;
-
+          
           .indicator {
             width: 8px;
             height: 8px;
@@ -1172,13 +1172,13 @@ $front-font-color: #d54941;
             background: rgba(255, 255, 255, 0.5);
             cursor: pointer;
             transition: all 0.3s;
-
+            
             &.active {
               background: #fff;
               width: 24px;
               border-radius: 4px;
             }
-
+            
             &:hover {
               background: rgba(255, 255, 255, 0.8);
             }

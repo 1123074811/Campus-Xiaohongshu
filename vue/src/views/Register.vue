@@ -2,7 +2,7 @@
 import {ref, reactive} from 'vue'
 import {useRouter} from 'vue-router'
 import {projectName} from '../../config/config.default'
-import {User, Lock, Key, DataAnalysis} from '@element-plus/icons-vue'
+import {User, Lock, Key, DataAnalysis, QuestionFilled} from '@element-plus/icons-vue'
 import {ElMessage} from 'element-plus'
 import request from "@/utils/request.js";
 
@@ -15,12 +15,28 @@ const roleOptions = [
   { label: '普通用户', value: 'ROLE_USER' }
 ]
 
+// 预设安全问题选项
+const securityQuestions = [
+  '您的出生地是哪里？',
+  '您小学时最好的朋友叫什么名字？',
+  '您的第一只宠物叫什么名字？',
+  '您母亲的姓名是什么？',
+  '您最喜欢的电影是什么？',
+  '您最喜欢的书籍是什么？',
+  '您的第一个老师叫什么名字？',
+  '您最难忘的一次旅行是去哪里？',
+  '自定义问题'
+]
+
 // 注册表单
 const registerForm = reactive({
   username: '',
   password: '',
   confirmPassword: '',
-  role: 'ROLE_USER' // 默认选择普通用户
+  role: 'ROLE_USER', // 默认选择普通用户
+  securityQuestion: '',
+  customQuestion: '',
+  securityAnswer: ''
 })
 
 // 是否同意
@@ -39,6 +55,25 @@ const rules = {
   confirmPassword: [
     {required: true, message: '请确认密码', trigger: 'blur'},
     {min: 3, max: 10, message: '长度在 3 到 10 个字符', trigger: 'blur'}
+  ],
+  securityQuestion: [
+    {required: true, message: '请选择安全问题', trigger: 'change'}
+  ],
+  customQuestion: [
+    {
+      validator: (rule, value, callback) => {
+        if (registerForm.securityQuestion === '自定义问题' && !value) {
+          callback(new Error('请输入自定义安全问题'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ],
+  securityAnswer: [
+    {required: true, message: '请输入安全问题答案', trigger: 'blur'},
+    {min: 1, max: 50, message: '答案长度在 1 到 50 个字符', trigger: 'blur'}
   ]
 }
 
@@ -54,11 +89,18 @@ const register = () => {
         return false
       }
 
-      // 创建一个不包含确认密码的对象
+      // 确定最终的安全问题
+      const finalSecurityQuestion = registerForm.securityQuestion === '自定义问题' 
+        ? registerForm.customQuestion 
+        : registerForm.securityQuestion
+
+      // 创建注册数据对象
       const registerData = {
         username: registerForm.username,
         password: registerForm.password,
-        role: registerForm.role
+        role: registerForm.role,
+        securityQuestion: finalSecurityQuestion,
+        securityAnswer: registerForm.securityAnswer
       }
 
       request.post('/web/register', registerData).then((res) => {
@@ -74,6 +116,13 @@ const register = () => {
       })
     }
   })
+}
+
+// 监听安全问题选择变化
+const onSecurityQuestionChange = () => {
+  if (registerForm.securityQuestion !== '自定义问题') {
+    registerForm.customQuestion = ''
+  }
 }
 </script>
 
@@ -163,6 +212,49 @@ const register = () => {
               </el-input>
             </el-form-item>
 
+            <!-- 安全问题设置 -->
+            <div class="security-section">
+              <div class="section-title">
+                <el-icon><QuestionFilled /></el-icon>
+                <span>设置安全问题（用于找回密码）</span>
+              </div>
+              
+              <el-form-item prop="securityQuestion">
+                <el-select
+                    v-model="registerForm.securityQuestion"
+                    placeholder="请选择安全问题"
+                    size="large"
+                    style="width: 100%"
+                    @change="onSecurityQuestionChange">
+                  <el-option
+                      v-for="question in securityQuestions"
+                      :key="question"
+                      :label="question"
+                      :value="question">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+
+              <el-form-item v-if="registerForm.securityQuestion === '自定义问题'" prop="customQuestion">
+                <el-input
+                    v-model="registerForm.customQuestion"
+                    placeholder="请输入您的自定义安全问题"
+                    size="large"
+                    maxlength="100"
+                    show-word-limit>
+                </el-input>
+              </el-form-item>
+
+              <el-form-item prop="securityAnswer">
+                <el-input
+                    v-model="registerForm.securityAnswer"
+                    placeholder="请输入安全问题的答案"
+                    size="large"
+                    maxlength="50"
+                    show-word-limit>
+                </el-input>
+              </el-form-item>
+            </div>
 
 
             <el-form-item>
@@ -263,7 +355,7 @@ const register = () => {
 
 .register-content {
   width: 1000px;
-  height: 680px; // 增加高度以适应更多表单项
+  height: 750px; // 增加高度以适应更多表单项
   display: flex;
   border-radius: 16px;
   overflow: hidden;
@@ -277,7 +369,7 @@ const register = () => {
   @media (max-width: 1024px) {
     width: 90%;
     height: auto;
-    min-height: 600px;
+    min-height: 700px;
   }
 
   @media (max-width: 768px) {
@@ -423,13 +515,44 @@ const register = () => {
   width: 360px;
   position: relative;
   z-index: 1;
-  max-height: 600px;
+  max-height: 650px; // 增加最大高度
   overflow-y: auto;
   padding-right: 10px;
 
   @media (max-width: 480px) {
     width: 100%;
     max-height: none;
+  }
+}
+
+// 安全问题区域样式
+.security-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  border: 1px solid #e9ecef;
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+
+    .el-icon {
+      margin-right: 8px;
+      color: #4084d9;
+    }
+  }
+
+  .el-form-item {
+    margin-bottom: 15px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
   }
 }
 
@@ -458,7 +581,7 @@ const register = () => {
 .back-to-home {
   display: flex;
   justify-content: flex-start;
-
+  
   .back-button {
     font-size: 14px;
     color: #4084d9;
@@ -466,7 +589,7 @@ const register = () => {
     margin: 0;
     height: auto;
     line-height: normal;
-
+    
     &:hover {
       color: #3a76c4;
       background-color: transparent;

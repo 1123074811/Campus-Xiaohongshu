@@ -46,7 +46,7 @@ load()
 // 保存
 const save = () => {
   form.value.content = htmlContent.value;
-
+  
   // 根据上传内容自动设置 category
   if (form.value.video) {
     form.value.category = '视频'
@@ -60,7 +60,7 @@ const save = () => {
   } else if (form.value.img) {
     form.value.category = '图片'
   }
-
+  
   request.post("/blog", form.value).then(res => {
     if (res.code === '200') {
       ElMessage.success("保存成功")
@@ -84,7 +84,7 @@ const handleAdd = () => {
 const handleEdit = (row) => {
   form.value = JSON.parse(JSON.stringify(row))
   htmlContent.value = form.value.content || '';
-
+  
   // 加载多图数据
   imageList.value = []
   if (form.value.images) {
@@ -96,7 +96,7 @@ const handleEdit = (row) => {
       imageList.value = []
     }
   }
-
+  
   dialogFormVisible.value = true
 }
 
@@ -211,7 +211,7 @@ const imageList = ref([]);
 
 const handleMultiImgUploadSuccess = (res) => {
   console.log('多图上传成功 - 原始响应:', res)
-
+  
   let imageUrl = ''
   // 检查响应格式，兼容 string 和 object 两种格式
   if (typeof res === 'string') {
@@ -223,7 +223,7 @@ const handleMultiImgUploadSuccess = (res) => {
     ElMessage.error('图片上传响应格式错误')
     return
   }
-
+  
   console.log('解析后的图片URL:', imageUrl)
   imageList.value.push(imageUrl);  // 确保push的是URL字符串
   form.value.images = JSON.stringify(imageList.value);
@@ -339,7 +339,7 @@ const parseImages = (imagesJson) => {
 // 计算总图片数量（包含封面）
 const getTotalImageCount = (row) => {
   let count = 1  // 封面图（博客一定有封面）
-
+  
   // 如果有多图数据，加上多图数量（去重封面）
   if (row.images) {
     const imagesArray = parseImages(row.images)
@@ -347,7 +347,7 @@ const getTotalImageCount = (row) => {
     const uniqueImages = imagesArray.filter(img => img !== row.img)
     count += uniqueImages.length
   }
-
+  
   return count
 }
 
@@ -367,12 +367,12 @@ const viewContent = (content) => {
     <!-- 搜索和操作区域 -->
     <div class="action-bar">
       <div class="search-section">
-        <el-input
-            v-model="searchForm.keyword"
-            placeholder="请输入博客标题"
-            class="search-input"
-            :prefix-icon="Search"
-            clearable
+        <el-input 
+          v-model="searchForm.keyword" 
+          placeholder="请输入博客标题" 
+          class="search-input" 
+          :prefix-icon="Search" 
+          clearable
         />
         <el-button type="primary" @click="load" :icon="Search">搜索</el-button>
         <el-button @click="reset">重置</el-button>
@@ -404,31 +404,31 @@ const viewContent = (content) => {
           <template #default="scope">
             <!-- 多图堆叠显示 -->
             <div v-if="scope.row.images" class="image-stack">
-              <el-image
-                  v-for="(img, index) in parseImages(scope.row.images).slice(0, 3)"
-                  :key="index"
-                  :style="{
+              <el-image 
+                v-for="(img, index) in parseImages(scope.row.images).slice(0, 3)" 
+                :key="index"
+                :style="{ 
                   zIndex: 3 - index,
                   transform: `translateX(${index * 8}px) rotate(${index * 3}deg)`
                 }"
-                  class="stacked-image"
-                  :src="img"
-                  :preview-src-list="parseImages(scope.row.images)"
-                  :initial-index="index"
-                  :preview-teleported="true"
-                  fit="cover"
+                class="stacked-image" 
+                :src="img" 
+                :preview-src-list="parseImages(scope.row.images)" 
+                :initial-index="index"
+                :preview-teleported="true"
+                fit="cover"
               />
               <!-- 图片数量标记（包含封面） -->
               <span class="image-count-badge">{{ getTotalImageCount(scope.row) }}</span>
             </div>
             <!-- 单图显示 -->
-            <el-image
-                v-else-if="scope.row.img"
-                style="width: 60px; height: 60px; border-radius: 4px;"
-                :src="scope.row.img"
-                :preview-src-list="[scope.row.img]"
-                :preview-teleported="true"
-                fit="cover"
+            <el-image 
+              v-else-if="scope.row.img" 
+              style="width: 60px; height: 60px; border-radius: 4px;" 
+              :src="scope.row.img" 
+              :preview-src-list="[scope.row.img]" 
+              :preview-teleported="true"
+              fit="cover"
             />
             <span v-else>-</span>
           </template>
@@ -516,11 +516,11 @@ const viewContent = (content) => {
                 </div>
               </div>
               <el-upload
-                  :action="`${serverHost}/web/upload`"
-                  :on-success="handleMultiImgUploadSuccess"
-                  :show-file-list="false"
-                  accept="image/*"
-                  class="upload-box"
+                :action="`${serverHost}/web/upload`"
+                :on-success="handleMultiImgUploadSuccess"
+                :show-file-list="false"
+                accept="image/*"
+                class="upload-box"
               >
                 <div class="upload-trigger">
                   <el-icon size="30"><Plus /></el-icon>
@@ -538,7 +538,7 @@ const viewContent = (content) => {
             </el-upload>
           </div>
         </el-form-item>
-
+        
         <!-- 显示当前类型（只读） -->
         <el-form-item label="类型">
           <el-tag v-if="form.video" type="primary">视频</el-tag>
@@ -741,15 +741,15 @@ const viewContent = (content) => {
     gap: 12px;
     align-items: stretch;
   }
-
+  
   .search-section {
     flex-wrap: wrap;
   }
-
+  
   .search-input {
     width: 100%;
   }
-
+  
   .toolbar-section {
     justify-content: flex-start;
   }

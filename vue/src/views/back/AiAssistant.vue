@@ -65,10 +65,10 @@
             <el-row :gutter="20">
               <el-col :xs="24" :sm="12" :md="6">
                 <el-input
-                    v-model="sessionSearch.keyword"
-                    placeholder="搜索会话标题或用户昵称"
-                    clearable
-                    @input="handleSessionSearch"
+                  v-model="sessionSearch.keyword"
+                  placeholder="搜索会话标题或用户昵称"
+                  clearable
+                  @input="handleSessionSearch"
                 >
                   <template #prefix>
                     <el-icon><Search /></el-icon>
@@ -77,15 +77,15 @@
               </el-col>
               <el-col :xs="24" :sm="12" :md="7">
                 <el-date-picker
-                    v-model="sessionSearch.dateRange"
-                    type="daterange"
-                    range-separator="至"
-                    start-placeholder="开始日期"
-                    end-placeholder="结束日期"
-                    format="YYYY-MM-DD"
-                    value-format="YYYY-MM-DD"
-                    @change="handleSessionSearch"
-                    style="width: 100%;"
+                  v-model="sessionSearch.dateRange"
+                  type="daterange"
+                  range-separator="至"
+                  start-placeholder="开始日期"
+                  end-placeholder="结束日期"
+                  format="YYYY-MM-DD"
+                  value-format="YYYY-MM-DD"
+                  @change="handleSessionSearch"
+                  style="width: 100%;"
                 />
               </el-col>
               <el-col :span="4">
@@ -111,10 +111,10 @@
 
           <!-- 会话列表 -->
           <el-table
-              :data="sessions"
-              v-loading="sessionsLoading"
-              @selection-change="handleSessionSelectionChange"
-              class="sessions-table"
+            :data="sessions"
+            v-loading="sessionsLoading"
+            @selection-change="handleSessionSelectionChange"
+            class="sessions-table"
           >
             <el-table-column type="selection" width="55" />
             <el-table-column prop="sessionId" label="会话ID" width="120" show-overflow-tooltip />
@@ -148,13 +148,13 @@
           <!-- 分页 -->
           <div class="pagination-container">
             <el-pagination
-                v-model:current-page="sessionPagination.page"
-                v-model:page-size="sessionPagination.size"
-                :page-sizes="[10, 20, 50, 100]"
-                :total="sessionPagination.total"
-                layout="total, sizes, prev, pager, next, jumper"
-                @size-change="loadSessions"
-                @current-change="loadSessions"
+              v-model:current-page="sessionPagination.page"
+              v-model:page-size="sessionPagination.size"
+              :page-sizes="[10, 20, 50, 100]"
+              :total="sessionPagination.total"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="loadSessions"
+              @current-change="loadSessions"
             />
           </div>
         </div>
@@ -168,10 +168,10 @@
             <el-row :gutter="20">
               <el-col :span="6">
                 <el-input
-                    v-model="messageSearch.keyword"
-                    placeholder="搜索消息内容"
-                    clearable
-                    @input="handleMessageSearch"
+                  v-model="messageSearch.keyword"
+                  placeholder="搜索消息内容"
+                  clearable
+                  @input="handleMessageSearch"
                 >
                   <template #prefix>
                     <el-icon><Search /></el-icon>
@@ -186,14 +186,14 @@
               </el-col>
               <el-col :span="7">
                 <el-date-picker
-                    v-model="messageSearch.dateRange"
-                    type="daterange"
-                    range-separator="至"
-                    start-placeholder="开始日期"
-                    end-placeholder="结束日期"
-                    format="YYYY-MM-DD"
-                    value-format="YYYY-MM-DD"
-                    @change="handleMessageSearch"
+                  v-model="messageSearch.dateRange"
+                  type="daterange"
+                  range-separator="至"
+                  start-placeholder="开始日期"
+                  end-placeholder="结束日期"
+                  format="YYYY-MM-DD"
+                  value-format="YYYY-MM-DD"
+                  @change="handleMessageSearch"
                 />
               </el-col>
               <el-col :span="6">
@@ -207,9 +207,9 @@
 
           <!-- 消息列表 -->
           <el-table
-              :data="messages"
-              v-loading="messagesLoading"
-              class="messages-table"
+            :data="messages"
+            v-loading="messagesLoading"
+            class="messages-table"
           >
             <el-table-column prop="sessionId" label="会话ID" width="120" show-overflow-tooltip />
             <el-table-column prop="userNickname" label="用户" width="120" />
@@ -245,13 +245,13 @@
           <!-- 分页 -->
           <div class="pagination-container">
             <el-pagination
-                v-model:current-page="messagePagination.page"
-                v-model:page-size="messagePagination.size"
-                :page-sizes="[10, 20, 50, 100]"
-                :total="messagePagination.total"
-                layout="total, sizes, prev, pager, next, jumper"
-                @size-change="loadMessages"
-                @current-change="loadMessages"
+              v-model:current-page="messagePagination.page"
+              v-model:page-size="messagePagination.size"
+              :page-sizes="[10, 20, 50, 100]"
+              :total="messagePagination.total"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="loadMessages"
+              @current-change="loadMessages"
             />
           </div>
         </div>
@@ -273,10 +273,10 @@
               </el-form-item>
               <el-form-item label="系统提示词">
                 <el-input
-                    v-model="aiConfig.systemPrompt"
-                    type="textarea"
-                    :rows="4"
-                    placeholder="请输入系统提示词"
+                  v-model="aiConfig.systemPrompt"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="请输入系统提示词"
                 />
               </el-form-item>
             </el-card>
@@ -314,10 +314,10 @@
 
     <!-- 消息详情对话框 -->
     <el-dialog
-        v-model="messageDetailVisible"
-        title="消息详情"
-        width="60%"
-        :before-close="closeMessageDetail"
+      v-model="messageDetailVisible"
+      title="消息详情"
+      width="60%"
+      :before-close="closeMessageDetail"
     >
       <div v-if="currentMessage" class="message-detail">
         <div class="detail-header">
@@ -338,17 +338,17 @@
 
     <!-- 会话消息对话框 -->
     <el-dialog
-        v-model="sessionMessagesVisible"
-        title="会话消息记录"
-        width="80%"
-        :before-close="closeSessionMessages"
+      v-model="sessionMessagesVisible"
+      title="会话消息记录"
+      width="80%"
+      :before-close="closeSessionMessages"
     >
       <div v-if="currentSessionMessages.length > 0" class="session-messages">
         <div
-            v-for="(message, index) in currentSessionMessages"
-            :key="index"
-            class="session-message"
-            :class="{ 'user-message': message.messageType === 'USER', 'ai-message': message.messageType === 'ASSISTANT' }"
+          v-for="(message, index) in currentSessionMessages"
+          :key="index"
+          class="session-message"
+          :class="{ 'user-message': message.messageType === 'USER', 'ai-message': message.messageType === 'ASSISTANT' }"
         >
           <div class="message-header">
             <el-tag :type="message.messageType === 'USER' ? 'primary' : 'success'" size="small">
@@ -485,12 +485,12 @@ const loadSessions = async () => {
       startDate: sessionSearch.value.dateRange?.[0],
       endDate: sessionSearch.value.dateRange?.[1]
     }
-
+    
     const res = await request.get('/admin/ai/sessions', {
       params,
       headers: uploadHeaders.value
     })
-
+    
     sessions.value = res.data.records || []
     sessionPagination.value.total = res.data.total || 0
   } catch (error) {
@@ -512,12 +512,12 @@ const loadMessages = async () => {
       startDate: messageSearch.value.dateRange?.[0],
       endDate: messageSearch.value.dateRange?.[1]
     }
-
+    
     const res = await request.get('/admin/ai/messages', {
       params,
       headers: uploadHeaders.value
     })
-
+    
     messages.value = res.data.records || []
     messagePagination.value.total = res.data.total || 0
   } catch (error) {
@@ -560,24 +560,24 @@ const handleBatchDelete = async () => {
     ElMessage.warning('请选择要删除的会话')
     return
   }
-
+  
   try {
     await ElMessageBox.confirm(
-        `确定要删除选中的 ${selectedSessions.value.length} 个会话吗？删除后无法恢复。`,
-        '确认删除',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning',
-        }
+      `确定要删除选中的 ${selectedSessions.value.length} 个会话吗？删除后无法恢复。`,
+      '确认删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
     )
-
+    
     const sessionIds = selectedSessions.value.map(s => s.sessionId)
     await request.delete('/admin/ai/sessions/batch', {
       data: { sessionIds },
       headers: uploadHeaders.value
     })
-
+    
     ElMessage.success('批量删除成功')
     loadSessions()
     loadStats()
@@ -598,19 +598,19 @@ const handleRefresh = () => {
 const deleteSession = async (session) => {
   try {
     await ElMessageBox.confirm(
-        `确定要删除会话"${session.title}"吗？删除后无法恢复。`,
-        '确认删除',
-        {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning',
-        }
+      `确定要删除会话"${session.title}"吗？删除后无法恢复。`,
+      '确认删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
     )
-
+    
     await request.delete(`/admin/ai/sessions/${session.sessionId}`, {
       headers: uploadHeaders.value
     })
-
+    
     ElMessage.success('删除成功')
     loadSessions()
     loadStats()
@@ -684,13 +684,13 @@ const truncateText = (text, maxLength) => {
 
 const formatMessageContent = (content) => {
   if (!content) return ''
-
+  
   // 处理思考内容
   let processedContent = content
-
+  
   const hasThink = content.includes('<think>') && content.includes('</think>')
   const hasThinking = content.includes('<thinking>') && content.includes('</thinking>')
-
+  
   if (hasThink || hasThinking) {
     // 提取思考内容
     const thinkMatches = content.matchAll(/<think>([\s\S]*?)<\/think>|<thinking>([\s\S]*?)<\/thinking>/g)
@@ -698,23 +698,23 @@ const formatMessageContent = (content) => {
     for (const match of thinkMatches) {
       thinkContents.push(match[1] || match[2])
     }
-
+    
     // 移除思考标签
     processedContent = content
-        .replace(/<think>[\s\S]*?<\/think>/g, '')
-        .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
-        .trim()
-
+      .replace(/<think>[\s\S]*?<\/think>/g, '')
+      .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+      .trim()
+    
     // 添加思考块
     if (thinkContents.length > 0) {
       const mergedThinking = thinkContents.join('\n\n').trim()
       const escapedThinking = mergedThinking
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/\n/g, '<br>')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>')
       const thinkingBlock = `<div class="thinking-content"><div class="thinking-header">🤔 AI思考过程</div><div class="thinking-text">${escapedThinking}</div></div>`
-
+      
       if (processedContent) {
         processedContent = thinkingBlock + '<br><br>' + processedContent
       } else {
@@ -722,22 +722,22 @@ const formatMessageContent = (content) => {
       }
     }
   }
-
+  
   // 检查是否包含思考块
   const hasSeparatedThinking = processedContent.includes('<div class="thinking-content">')
-
+  
   if (hasSeparatedThinking) {
     const thinkingMatch = processedContent.match(/(<div class="thinking-content">.*?<\/div><\/div>)(<br><br>)?(.*)/s)
     if (thinkingMatch) {
       const thinkingBlock = thinkingMatch[1]
       const mainContent = thinkingMatch[3] || ''
-
+      
       const renderedContent = mainContent.trim() ? marked.parse(mainContent) : ''
-
+      
       return thinkingBlock + (renderedContent ? '<br><br>' + renderedContent : '')
     }
   }
-
+  
   // 使用 marked 渲染 markdown
   try {
     return marked.parse(processedContent)
@@ -1135,20 +1135,20 @@ const formatMessageContent = (content) => {
   .ai-assistant-management {
     padding: 10px;
   }
-
+  
   .search-bar .el-row {
     flex-direction: column;
   }
-
+  
   .search-bar .el-col {
     width: 100%;
     margin-bottom: 10px;
   }
-
+  
   .action-buttons {
     justify-content: center;
   }
-
+  
   .config-form {
     max-width: 100%;
   }

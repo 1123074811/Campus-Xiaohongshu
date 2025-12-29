@@ -178,12 +178,12 @@ const handleAvatarUrlUploadError = (error) => {
     <!-- 搜索和操作区域 -->
     <div class="action-bar">
       <div class="search-section">
-        <el-input
-            v-model="searchForm.keyword"
-            placeholder="请输入昵称"
-            class="search-input"
-            :prefix-icon="Search"
-            clearable
+        <el-input 
+          v-model="searchForm.keyword" 
+          placeholder="请输入昵称" 
+          class="search-input" 
+          :prefix-icon="Search" 
+          clearable
         />
         <el-button type="primary" @click="load" :icon="Search">搜索</el-button>
         <el-button @click="reset">重置</el-button>
@@ -313,15 +313,15 @@ const handleAvatarUrlUploadError = (error) => {
     gap: 12px;
     align-items: stretch;
   }
-
+  
   .search-section {
     flex-wrap: wrap;
   }
-
+  
   .search-input {
     width: 100%;
   }
-
+  
   .toolbar-section {
     justify-content: flex-start;
   }

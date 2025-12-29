@@ -107,7 +107,7 @@ const resetForm = () => {
 // 提交表单
 const submitForm = () => {
   console.log('开始提交表单...')
-
+  
   // 根据上传内容自动设置 category
   if (form.video) {
     form.category = '视频'
@@ -124,7 +124,7 @@ const submitForm = () => {
     form.category = '图片'
     console.log('检测到封面图，设置 category 为: 图片')
   }
-
+  
   console.log('提交数据:', {
     name: form.name,
     typeId: form.typeId,
@@ -134,7 +134,7 @@ const submitForm = () => {
     images: form.images,
     contentLength: form.content?.length || 0
   })
-
+  
   request.post('/blog', form).then(res => {
     console.log('提交响应:', res)
     if (res.code === '200') {
@@ -175,13 +175,13 @@ const generateVideoCoverPreview = () => {
 
 const uploadVideoCoverAndSubmit = () => {
   console.log('开始上传视频封面图...')
-
+  
   if (!videoCoverPreview.value) {
     console.warn('没有视频封面预览图，直接提交')
     submitForm()
     return
   }
-
+  
   // 将预览图转换为 Blob
   const imgSrcBase64 = videoCoverPreview.value
   const byteString = window.atob(imgSrcBase64.split(',')[1])
@@ -207,7 +207,7 @@ const uploadVideoCoverAndSubmit = () => {
     headers: {'Content-Type': 'multipart/form-data'}
   }).then(res => {
     console.log('视频封面图上传成功 - 原始响应:', res)
-
+    
     // 检查响应格式
     let coverUrl = ''
     if (typeof res.data === 'string') {
@@ -220,7 +220,7 @@ const uploadVideoCoverAndSubmit = () => {
       isSubmitting.value = false
       return
     }
-
+    
     form.img = coverUrl
     console.log('视频封面图URL:', form.img)
     submitForm()
@@ -267,7 +267,7 @@ const handleImgUploadSuccess = (res) => {
 // 多图上传成功回调
 const handleMultiImgUploadSuccess = (res) => {
   console.log('多图上传成功 - 原始响应:', res)
-
+  
   let imageUrl = ''
   // 检查响应格式
   if (typeof res === 'string') {
@@ -279,16 +279,16 @@ const handleMultiImgUploadSuccess = (res) => {
     ElMessage.error('图片上传响应格式错误')
     return
   }
-
+  
   console.log('解析后的图URL:', imageUrl)
   imageList.value.push(imageUrl);
   form.category = '图片';
-
+  
   // 如果没有封面，将第一张图设为封面
   if (!form.img && imageList.value.length > 0) {
     form.img = imageList.value[0];
   }
-
+  
   console.log('当前图片列表:', imageList.value)
   console.log('imageList长度:', imageList.value.length)
 }
@@ -319,7 +319,7 @@ const handleUploadError = (error) => {
 // 视频上传成功回调
 const handleVideoUploadSuccess = (res) => {
   console.log('视频上传成功 - 原始响应:', res)
-
+  
   // 检查响应格式
   let videoUrl = ''
   if (typeof res === 'string') {
@@ -331,7 +331,7 @@ const handleVideoUploadSuccess = (res) => {
     ElMessage.error('视频上传响应格式错误')
     return
   }
-
+  
   form.video = videoUrl
   console.log('视频URL:', form.video)
   form.category = '视频'
@@ -380,17 +380,17 @@ onMounted(() => {
               <img v-if="form.img" :src="form.img" class="img" alt="封面图">
               <el-icon v-else class="img-uploader-icon"><Plus /></el-icon>
             </el-upload>
-
+            
             <!-- 多图上传区域 -->
             <div class="multi-upload-section">
               <div class="section-title">多图上传（可选）</div>
               <div class="image-list">
                 <div v-for="(img, index) in imageList" :key="index" class="image-item">
-                  <img
-                      :src="img"
-                      class="uploaded-image"
-                      alt="上传图片"
-                      @error="handleImageError($event, img, index)"
+                  <img 
+                    :src="img" 
+                    class="uploaded-image" 
+                    alt="上传图片"
+                    @error="handleImageError($event, img, index)"
                   />
                   <div class="image-overlay">
                     <el-button type="danger" size="small" circle @click="handleRemoveImage(index)">
@@ -399,12 +399,12 @@ onMounted(() => {
                   </div>
                 </div>
                 <el-upload
-                    :action="`${serverHost}/web/upload`"
-                    :on-success="handleMultiImgUploadSuccess"
-                    :on-error="handleUploadError"
-                    :show-file-list="false"
-                    accept="image/*"
-                    class="upload-box"
+                  :action="`${serverHost}/web/upload`"
+                  :on-success="handleMultiImgUploadSuccess"
+                  :on-error="handleUploadError"
+                  :show-file-list="false"
+                  accept="image/*"
+                  class="upload-box"
                 >
                   <div class="upload-trigger">
                     <el-icon size="30"><Plus /></el-icon>
@@ -457,7 +457,7 @@ onMounted(() => {
             <Editor style="height: 300px; overflow-y: hidden;" v-model="htmlContent" :defaultConfig="editorConfig" mode="default" @onCreated="editorRefContent = $event" />
           </div>
         </el-form-item>
-
+        
         <!-- 显示当前类型（只读） -->
         <el-form-item label="类型">
           <el-tag v-if="form.video" type="primary">视频</el-tag>

@@ -63,9 +63,9 @@ const checkFollow = (id) => {
 const initFollowStatus = () => {
   // 找出所有关注类型的消息的发送者ID
   const followerIds = [...new Set(messages.value
-      .filter(msg => msg.type === '关注')
-      .map(msg => msg.fromUserId))];
-
+    .filter(msg => msg.type === '关注')
+    .map(msg => msg.fromUserId))];
+  
   // 为每个发送者检查关注状态
   followerIds.forEach(id => checkFollow(id));
 };
@@ -86,13 +86,13 @@ const toggleMenu = (id) => {
 const deleteMessage = (id) => {
   showMenuId.value = null // 关闭菜单
   ElMessageBox.confirm(
-      '确定要删除这条通知吗？',
-      '提示',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      }
+    '确定要删除这条通知吗？',
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
   ).then(() => {
     request.delete("/message/" + id).then(res => {
       if (res.code === '200') {

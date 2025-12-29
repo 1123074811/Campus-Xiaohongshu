@@ -1392,7 +1392,7 @@ const handleWebRTCSignaling = async (message) => {
   overflow: hidden;
   margin: 20px auto;
   max-width: 1200px;
-
+  
   /* 响应式布局 */
   @media (max-width: 768px) {
     flex-direction: column;
@@ -1401,7 +1401,7 @@ const handleWebRTCSignaling = async (message) => {
     border-radius: 0;
     min-height: calc(100vh - 60px);
   }
-
+  
   @media (max-width: 480px) {
     height: calc(100vh - 60px);
     min-height: calc(100vh - 60px);
@@ -1414,19 +1414,19 @@ const handleWebRTCSignaling = async (message) => {
   display: flex;
   flex-direction: column;
   background-color: #fafafa;
-
+  
   /* 响应式调整 */
   @media (max-width: 1024px) {
     width: 250px;
   }
-
+  
   @media (max-width: 768px) {
     width: 100%;
     height: 40%;
     border-right: none;
     border-bottom: 1px solid #f0f0f0;
   }
-
+  
   @media (max-width: 480px) {
     height: 35%;
   }
@@ -1440,13 +1440,13 @@ const handleWebRTCSignaling = async (message) => {
   justify-content: space-between;
   align-items: center;
   background-color: #fff;
-
+  
   /* 响应式调整 */
   @media (max-width: 768px) {
     height: 50px;
     padding: 12px 15px;
   }
-
+  
   @media (max-width: 480px) {
     height: 45px;
     padding: 10px 12px;
@@ -1468,12 +1468,12 @@ const handleWebRTCSignaling = async (message) => {
   font-size: 16px;
   font-weight: 600;
   color: #333;
-
+  
   /* 响应式字体 */
   @media (max-width: 768px) {
     font-size: 14px;
   }
-
+  
   @media (max-width: 480px) {
     font-size: 13px;
   }
@@ -1487,12 +1487,12 @@ const handleWebRTCSignaling = async (message) => {
   flex: 1;
   overflow-y: auto;
   padding: 10px;
-
+  
   /* 响应式调整 */
   @media (max-width: 768px) {
     padding: 8px;
   }
-
+  
   @media (max-width: 480px) {
     padding: 5px;
   }
@@ -1507,13 +1507,13 @@ const handleWebRTCSignaling = async (message) => {
   transition: all 0.3s ease;
   margin-bottom: 6px;
   position: relative;
-
+  
   /* 响应式调整 */
   @media (max-width: 768px) {
     padding: 10px 12px;
     margin-bottom: 4px;
   }
-
+  
   @media (max-width: 480px) {
     padding: 8px 10px;
     margin-bottom: 3px;
@@ -1540,13 +1540,13 @@ const handleWebRTCSignaling = async (message) => {
   object-fit: cover;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 2px solid #fff;
-
+  
   /* 响应式头像大小 */
   @media (max-width: 768px) {
     width: 36px;
     height: 36px;
   }
-
+  
   @media (max-width: 480px) {
     width: 32px;
     height: 32px;
@@ -1600,12 +1600,12 @@ const handleWebRTCSignaling = async (message) => {
   overflow: hidden;
   text-overflow: ellipsis;
   margin-bottom: 4px;
-
+  
   /* 响应式字体 */
   @media (max-width: 768px) {
     font-size: 13px;
   }
-
+  
   @media (max-width: 480px) {
     font-size: 12px;
   }
@@ -1620,12 +1620,12 @@ const handleWebRTCSignaling = async (message) => {
   display: flex;
   flex-direction: column;
   background-color: #fff;
-
+  
   /* 响应式调整 */
   @media (max-width: 768px) {
     height: 60%;
   }
-
+  
   @media (max-width: 480px) {
     height: 65%;
   }
@@ -1639,14 +1639,14 @@ const handleWebRTCSignaling = async (message) => {
   justify-content: space-between;
   align-items: center;
   background-color: #fff;
-
+  
   /* 响应式调整 */
   @media (max-width: 768px) {
     height: 50px;
     padding: 12px 15px;
     flex-wrap: wrap;
   }
-
+  
   @media (max-width: 480px) {
     height: auto;
     min-height: 45px;
@@ -1664,12 +1664,12 @@ const handleWebRTCSignaling = async (message) => {
   font-size: 16px;
   font-weight: 600;
   color: #333;
-
+  
   /* 响应式字体 */
   @media (max-width: 768px) {
     font-size: 14px;
   }
-
+  
   @media (max-width: 480px) {
     font-size: 13px;
   }
@@ -1688,13 +1688,13 @@ const handleWebRTCSignaling = async (message) => {
   display: flex;
   align-items: center;
   gap: 12px;
-
+  
   /* 响应式调整 */
   @media (max-width: 768px) {
     gap: 8px;
     flex-wrap: wrap;
   }
-
+  
   @media (max-width: 480px) {
     gap: 6px;
     width: 100%;
@@ -1707,14 +1707,14 @@ const handleWebRTCSignaling = async (message) => {
   border-radius: 20px;
   padding: 8px 16px;
   margin-right: 8px;
-
+  
   /* 响应式按钮 */
   @media (max-width: 768px) {
     padding: 6px 12px;
     font-size: 12px;
     margin-right: 4px;
   }
-
+  
   @media (max-width: 480px) {
     padding: 5px 10px;
     font-size: 11px;
@@ -1770,13 +1770,13 @@ const handleWebRTCSignaling = async (message) => {
   background-image: linear-gradient(rgba(240, 240, 240, 0.5) 1px, transparent 1px),
   linear-gradient(90deg, rgba(240, 240, 240, 0.5) 1px, transparent 1px);
   background-size: 20px 20px;
-
+  
   /* 响应式调整 */
   @media (max-width: 768px) {
     padding: 15px;
     background-size: 15px 15px;
   }
-
+  
   @media (max-width: 480px) {
     padding: 10px;
     background-size: 12px 12px;
@@ -1788,13 +1788,13 @@ const handleWebRTCSignaling = async (message) => {
   margin-bottom: 20px;
   align-items: flex-start;
   gap: 12px;
-
+  
   /* 响应式调整 */
   @media (max-width: 768px) {
     margin-bottom: 15px;
     gap: 10px;
   }
-
+  
   @media (max-width: 480px) {
     margin-bottom: 12px;
     gap: 8px;
@@ -1813,13 +1813,13 @@ const handleWebRTCSignaling = async (message) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 2px solid #fff;
   flex-shrink: 0;
-
+  
   /* 响应式头像 */
   @media (max-width: 768px) {
     width: 35px;
     height: 35px;
   }
-
+  
   @media (max-width: 480px) {
     width: 30px;
     height: 30px;
@@ -1830,12 +1830,12 @@ const handleWebRTCSignaling = async (message) => {
   max-width: 60%;
   display: flex;
   flex-direction: column;
-
+  
   /* 响应式宽度 */
   @media (max-width: 768px) {
     max-width: 70%;
   }
-
+  
   @media (max-width: 480px) {
     max-width: 75%;
   }
@@ -1865,13 +1865,13 @@ const handleWebRTCSignaling = async (message) => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   position: relative;
   max-width: 100%;
-
+  
   /* 响应式调整 */
   @media (max-width: 768px) {
     padding: 10px 14px;
     font-size: 13px;
   }
-
+  
   @media (max-width: 480px) {
     padding: 8px 12px;
     font-size: 12px;
@@ -1911,13 +1911,13 @@ const handleWebRTCSignaling = async (message) => {
   display: block;
   cursor: pointer;
   transition: transform 0.2s ease;
-
+  
   /* 响应式图片 */
   @media (max-width: 768px) {
     width: 160px;
     height: 160px;
   }
-
+  
   @media (max-width: 480px) {
     width: 120px;
     height: 120px;
@@ -1944,13 +1944,13 @@ const handleWebRTCSignaling = async (message) => {
   background-color: #f5f5f5;
   color: #999;
   gap: 8px;
-
+  
   /* 响应式错误图片 */
   @media (max-width: 768px) {
     width: 160px;
     height: 160px;
   }
-
+  
   @media (max-width: 480px) {
     width: 120px;
     height: 120px;
@@ -2000,12 +2000,12 @@ const handleWebRTCSignaling = async (message) => {
   padding: 15px 20px;
   border-top: 1px solid #f0f0f0;
   background-color: #fff;
-
+  
   /* 响应式调整 */
   @media (max-width: 768px) {
     padding: 12px 15px;
   }
-
+  
   @media (max-width: 480px) {
     padding: 10px 12px;
   }
@@ -2035,13 +2035,13 @@ const handleWebRTCSignaling = async (message) => {
   background-color: #fafafa;
   border-radius: 8px;
   border: 1px solid #e8e8e8;
-
+  
   /* 响应式工具栏 */
   @media (max-width: 768px) {
     gap: 6px;
     padding: 6px 10px;
   }
-
+  
   @media (max-width: 480px) {
     gap: 4px;
     padding: 5px 8px;
@@ -2056,14 +2056,14 @@ const handleWebRTCSignaling = async (message) => {
   padding: 0 16px;
   transition: all 0.3s ease;
   border-color: #d9d9d9;
-
+  
   /* 响应式按钮 */
   @media (max-width: 768px) {
     height: 28px;
     padding: 0 12px;
     font-size: 12px;
   }
-
+  
   @media (max-width: 480px) {
     height: 26px;
     padding: 0 10px;
@@ -2194,14 +2194,14 @@ const handleWebRTCSignaling = async (message) => {
   display: flex;
   flex-direction: column;
   margin-bottom: 8px;
-
+  
   /* 响应式表情面板 */
   @media (max-width: 768px) {
     width: 400px;
     height: 280px;
     right: -50px;
   }
-
+  
   @media (max-width: 480px) {
     width: 300px;
     height: 240px;
@@ -2251,14 +2251,14 @@ const handleWebRTCSignaling = async (message) => {
   grid-template-columns: repeat(8, 1fr);
   gap: 10px;
   align-content: start;
-
+  
   /* 响应式表情网格 */
   @media (max-width: 768px) {
     grid-template-columns: repeat(6, 1fr);
     gap: 8px;
     padding: 10px;
   }
-
+  
   @media (max-width: 480px) {
     grid-template-columns: repeat(5, 1fr);
     gap: 6px;
@@ -2278,13 +2278,13 @@ const handleWebRTCSignaling = async (message) => {
   align-items: center;
   justify-content: center;
   aspect-ratio: 1;
-
+  
   /* 响应式表情 */
   @media (max-width: 768px) {
     font-size: 20px;
     padding: 6px;
   }
-
+  
   @media (max-width: 480px) {
     font-size: 18px;
     padding: 4px;
@@ -2313,14 +2313,14 @@ const handleWebRTCSignaling = async (message) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-
+  
   /* 响应式发送区域 */
   @media (max-width: 768px) {
     flex-direction: column;
     gap: 8px;
     align-items: stretch;
   }
-
+  
   @media (max-width: 480px) {
     gap: 6px;
   }
@@ -2332,13 +2332,13 @@ const handleWebRTCSignaling = async (message) => {
   display: flex;
   align-items: center;
   gap: 4px;
-
+  
   /* 响应式提示 */
   @media (max-width: 768px) {
     font-size: 11px;
     justify-content: center;
   }
-
+  
   @media (max-width: 480px) {
     font-size: 10px;
   }
@@ -2471,14 +2471,14 @@ const handleWebRTCSignaling = async (message) => {
   border-radius: 16px;
   overflow: hidden;
   max-width: 1000px;
-
+  
   /* 响应式视频通话对话框 */
   @media (max-width: 768px) {
     width: 95% !important;
     max-width: none;
     margin: 20px auto;
   }
-
+  
   @media (max-width: 480px) {
     width: 100% !important;
     height: 100% !important;
@@ -2513,12 +2513,12 @@ const handleWebRTCSignaling = async (message) => {
   position: relative;
   width: 100%;
   height: 750px;
-
+  
   /* 响应式视频主区域 */
   @media (max-width: 768px) {
     height: 500px;
   }
-
+  
   @media (max-width: 480px) {
     height: calc(100vh - 120px);
   }
@@ -2551,7 +2551,7 @@ const handleWebRTCSignaling = async (message) => {
   border: 2px solid #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   background-color: #2a2a2a;
-
+  
   /* 响应式本地视频 */
   @media (max-width: 768px) {
     width: 150px;
@@ -2559,7 +2559,7 @@ const handleWebRTCSignaling = async (message) => {
     top: 15px;
     right: 15px;
   }
-
+  
   @media (max-width: 480px) {
     width: 120px;
     height: 90px;
@@ -2660,14 +2660,14 @@ const handleWebRTCSignaling = async (message) => {
   border: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
-
+  
   /* 响应式控制按钮 */
   @media (max-width: 768px) {
     width: 48px;
     height: 48px;
     font-size: 18px;
   }
-
+  
   @media (max-width: 480px) {
     width: 40px;
     height: 40px;

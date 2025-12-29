@@ -54,6 +54,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             BeanUtils.copyProperties(account, one);
             // 对密码进行MD5加密后再保存
             one.setPassword(DigestUtil.md5Hex(account.getPassword()));
+            
+            // 处理安全问题和答案
+            if (cn.hutool.core.util.StrUtil.isNotBlank(account.getSecurityQuestion()) && 
+                cn.hutool.core.util.StrUtil.isNotBlank(account.getSecurityAnswer())) {
+                one.setSecurityQuestion(account.getSecurityQuestion());
+                // 对安全问题答案进行MD5加密后保存
+                one.setSecurityAnswer(DigestUtil.md5Hex(account.getSecurityAnswer().trim().toLowerCase()));
+            }
+            
             save(one);
         } else {
             throw new ServiceException(Constants.CODE_605, "用户已存在");
