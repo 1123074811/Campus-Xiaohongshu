@@ -31,6 +31,8 @@ import static org.springframework.ai.chat.memory.ChatMemory.CONVERSATION_ID;
 @RequiredArgsConstructor
 public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMessage> implements IAiChatService {
     
+    private static final String AI_UNAVAILABLE_MESSAGE = "AI助手暂不可用：未检测到可用的 Ollama 服务或模型。请确认已安装并启动 Ollama，且已下载配置的模型后再试。";
+    
     private final AiChatSessionMapper sessionMapper;
     private final DynamicChatClientService dynamicChatClientService;
     
@@ -108,35 +110,42 @@ public class AiChatServiceImpl extends ServiceImpl<AiChatMessageMapper, AiChatMe
         // 构建包含思考指令的提示词
         String enhancedPrompt = buildEnhancedPrompt(message);
         
-        // 获取动态配置的ChatClient
-        ChatClient chatClient = dynamicChatClientService.getCurrentChatClient();
-        
-        // 获取AI回复流
-        return chatClient.prompt()
-                .user(enhancedPrompt)
-                .advisors(a -> a.param(CONVERSATION_ID, sessionId))
-                .stream()
-                .content()
-                .map(this::processAiChunk) // 处理AI回复块，添加思考标识
-                .doOnNext(chunk -> {
-                    // 收集每个流式块（处理后的）
-                    responseBuilder.append(chunk);
-                    // 调试日志：输出AI回复的每个块
-                    log.debug("AI chunk: {}", chunk);
-                })
-                .doOnComplete(() -> {
-                    // 流结束后保存完整的AI回复
-                    String completeResponse = responseBuilder.toString();
-                    log.info("AI完整回复 (sessionId: {}): {}", sessionId, completeResponse);
-                    if (!completeResponse.isEmpty()) {
-                        saveAiResponse(sessionId, userId, completeResponse);
-                    }
-                })
-                .doOnError(error -> {
-                    log.error("AI聊天出错: ", error);
-                    // 出错时也保存错误信息
-                    saveAiResponse(sessionId, userId, "抱歉，我遇到了一些问题，请稍后再试。");
-                });
+        try {
+            // 获取动态配置的ChatClient
+            ChatClient chatClient = dynamicChatClientService.getCurrentChatClient();
+            
+            // 获取AI回复流
+            return chatClient.prompt()
+                    .user(enhancedPrompt)
+                    .advisors(a -> a.param(CONVERSATION_ID, sessionId))
+                    .stream()
+                    .content()
+                    .map(this::processAiChunk) // 处理AI回复块，添加思考标识
+                    .doOnNext(chunk -> {
+                        // 收集每个流式块（处理后的）
+                        responseBuilder.append(chunk);
+                        // 调试日志：输出AI回复的每个块
+                        log.debug("AI chunk: {}", chunk);
+                    })
+                    .doOnComplete(() -> {
+                        // 流结束后保存完整的AI回复
+                        String completeResponse = responseBuilder.toString();
+                        log.info("AI完整回复 (sessionId: {}): {}", sessionId, completeResponse);
+                        if (!completeResponse.isEmpty()) {
+                            saveAiResponse(sessionId, userId, completeResponse);
+                        }
+                    })
+                    .doOnError(error -> {
+                        log.warn("AI聊天调用失败，已返回友好提示: {}", error.getMessage());
+                        // 出错时也保存错误信息
+                        saveAiResponse(sessionId, userId, AI_UNAVAILABLE_MESSAGE);
+                    })
+                    .onErrorReturn(AI_UNAVAILABLE_MESSAGE);
+        } catch (Exception e) {
+            log.warn("AI聊天功能当前不可用，已返回友好提示: {}", e.getMessage());
+            saveAiResponse(sessionId, userId, AI_UNAVAILABLE_MESSAGE);
+            return Flux.just(AI_UNAVAILABLE_MESSAGE);
+        }
     }
     
     @Override

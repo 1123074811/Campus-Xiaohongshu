@@ -2,6 +2,7 @@ package com.example.springboot.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -14,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Redis聊天记忆存储库
  */
+@Slf4j
 @Component
 public class RedisChatMemoryRepository implements ChatMemoryRepository {
     
@@ -38,7 +40,7 @@ public class RedisChatMemoryRepository implements ChatMemoryRepository {
             String jsonValue = objectMapper.writeValueAsString(simpleMessages);
             redisTemplate.opsForValue().set(key, jsonValue, EXPIRE_TIME, TimeUnit.SECONDS);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to save chat memory", e);
+            log.warn("AI聊天记忆保存失败，已忽略本次Redis异常: {}", e.getMessage());
         }
     }
     
@@ -59,24 +61,33 @@ public class RedisChatMemoryRepository implements ChatMemoryRepository {
                     .map(this::convertToMessage)
                     .toList();
         } catch (Exception e) {
-            // 如果反序列化失败，返回空列表而不是抛出异常
+            log.warn("AI聊天记忆读取失败，已使用空上下文降级: {}", e.getMessage());
             return List.of();
         }
     }
     
     @Override
     public void deleteByConversationId(String conversationId) {
-        String key = CHAT_MEMORY_PREFIX + conversationId;
-        redisTemplate.delete(key);
+        try {
+            String key = CHAT_MEMORY_PREFIX + conversationId;
+            redisTemplate.delete(key);
+        } catch (Exception e) {
+            log.warn("AI聊天记忆删除失败，已忽略本次Redis异常: {}", e.getMessage());
+        }
     }
     
     @Override
     public List<String> findConversationIds() {
-        // 获取所有会话ID
-        String pattern = CHAT_MEMORY_PREFIX + "*";
-        return redisTemplate.keys(pattern).stream()
-                .map(key -> key.toString().replace(CHAT_MEMORY_PREFIX, ""))
-                .toList();
+        try {
+            // 获取所有会话ID
+            String pattern = CHAT_MEMORY_PREFIX + "*";
+            return redisTemplate.keys(pattern).stream()
+                    .map(key -> key.toString().replace(CHAT_MEMORY_PREFIX, ""))
+                    .toList();
+        } catch (Exception e) {
+            log.warn("AI聊天记忆会话列表读取失败，已使用空列表降级: {}", e.getMessage());
+            return List.of();
+        }
     }
     
     /**

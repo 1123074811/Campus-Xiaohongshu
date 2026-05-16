@@ -9,6 +9,7 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.ollama.OllamaChatModel;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class DynamicChatClientService {
     
-    private final OllamaChatModel model;
+    private final ObjectProvider<OllamaChatModel> modelProvider;
     private final ChatMemoryRepository chatMemoryRepository;
     private final AiConfigService aiConfigService;
     
@@ -52,6 +53,11 @@ public class DynamicChatClientService {
      */
     private ChatClient createChatClient() {
         try {
+            OllamaChatModel model = modelProvider.getIfAvailable();
+            if (model == null) {
+                throw new IllegalStateException("AI助手暂不可用：未检测到 Ollama 模型配置，请确认 Ollama 相关依赖与配置是否启用");
+            }
+            
             // 获取当前配置
             String systemPrompt = aiConfigService.getSystemPrompt();
             int maxMessages = aiConfigService.getMaxMessages();
